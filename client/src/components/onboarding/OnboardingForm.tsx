@@ -359,7 +359,20 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   // Calculate form completion progress
   useEffect(() => {
     const totalFields = Object.keys(businessDetails).length;
-    const filledFields = Object.values(businessDetails).filter(value => value.trim() !== '').length;
+    const filledFields = Object.entries(businessDetails).filter(([key, value]) => {
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      // Handle non-string values
+      if (key === 'logo') {
+        return value !== null;
+      }
+      // For color values, any value is considered filled since we have defaults
+      if (['mainColor', 'secondaryColor', 'highlightColor'].includes(key)) {
+        return true;
+      }
+      return false;
+    }).length;
     setFormProgress(Math.round((filledFields / totalFields) * 100));
   }, [businessDetails]);
 
@@ -809,7 +822,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
               {currentStep > 0 && (
                 <button
                   onClick={handlePrevious}
-                  className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
+                  className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration200 flex items-center transform hover:scale-105"
                   disabled={animatingNav || isSubmitting}
                   aria-label="Go to previous step"
                 >
