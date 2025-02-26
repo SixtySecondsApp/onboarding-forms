@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { ProgressTracker, defaultSteps, type Step } from './ProgressTracker';
 import { ShareSection } from './ShareSection';
-import { type BusinessDetails } from '@shared/schema';
+import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -205,11 +205,11 @@ const FormSection = ({ title, icon: Icon, children, onShareSection }: {
 };
 
 export function OnboardingForm({ formId, sectionId }: Props) {
-  const { data: form } = useQuery({
+  const { data: form } = useQuery<FormType>({
     queryKey: ["/api/forms", formId],
   });
 
-  const { data: section } = useQuery({
+  const { data: section } = useQuery<FormType>({
     queryKey: ["/api/sections", sectionId],
     enabled: !!sectionId,
   });
@@ -233,12 +233,12 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
   const [animatingNav, setAnimatingNav] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
-    name: sectionId ? section?.data?.name || '' : form?.data?.name || '',
-    type: sectionId ? section?.data?.type || '' : form?.data?.type || '',
-    website: sectionId ? section?.data?.website || '' : form?.data?.website || '',
-    linkedin: sectionId ? section?.data?.linkedin || '' : form?.data?.linkedin || '',
-    phone: sectionId ? section?.data?.phone || '' : form?.data?.phone || '',
-    location: sectionId ? section?.data?.location || '' : form?.data?.location || ''
+    name: '',
+    type: '',
+    website: '',
+    linkedin: '',
+    phone: '',
+    location: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -332,6 +332,15 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     const filledFields = Object.values(businessDetails).filter(value => value.trim() !== '').length;
     setFormProgress(Math.round((filledFields / totalFields) * 100));
   }, [businessDetails]);
+
+  useEffect(() => {
+    if (sectionId && section?.data) {
+      setBusinessDetails(section.data as BusinessDetails);
+    } else if (form?.data) {
+      setBusinessDetails(form.data as BusinessDetails);
+    }
+  }, [form, section, sectionId]);
+
 
   // Enhanced validation with real-time feedback and more detailed error messages
   const validateField = (name: keyof BusinessDetails, value: string) => {
