@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload } from 'lucide-react';
+import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, DollarSign } from 'lucide-react';
 import { ProgressTracker, type Step } from './ProgressTracker';
 import { ShareSection } from './ShareSection';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
@@ -247,6 +247,7 @@ const Input = ({ id, type = "text", placeholder, className, value, onChange }: {
 )
 
 export function OnboardingForm({ formId, sectionId }: Props) {
+  // Query and mutation hooks
   const { data: form } = useQuery<FormType>({
     queryKey: ["/api/forms", formId],
   });
@@ -272,6 +273,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     },
   });
 
+  // All state declarations grouped together
   const [currentStep, setCurrentStep] = useState(0);
   const [animatingNav, setAnimatingNav] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
@@ -286,26 +288,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     mainColor: "#000000",
     secondaryColor: "#000000",
     highlightColor: "#000000"
-
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formProgress, setFormProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Added state for brand assets
   const [brandAssets, setBrandAssets] = useState({
     brandName: '',
     mainColor: '#000000',
     secondaryColor: '#000000',
     highlightColor: '#000000'
   });
-
-  // Added state for file upload
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
-
-  // Add new state for campaign and audience data
   const [campaign, setCampaign] = useState({
     campaignName: '',
     objective: '',
@@ -314,41 +309,22 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     keyMessages: '',
     callToAction: ''
   });
-
   const [audience, setAudience] = useState({
     jobTitles: '',
     industries: '',
     companySize: '',
     locations: ''
   });
-
-  // Added state for selected industries and other industry input
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [otherIndustry, setOtherIndustry] = useState('');
-
-
-  // Animation variants for consistent animations
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15,
-        mass: 1
-      }
-    },
-    exit: {
-      opacity: 0,
-      y: -20,
-      transition: {
-        duration: 0.2,
-        ease: "easeOut"
-      }
-    }
-  };
+  const [salesData, setSalesData] = useState({
+    salesType: '',
+    meetingsBeforeProposal: '',
+    proposalConversionRate: '',
+    averageOrderValue: '',
+    billingFrequency: '',
+    averageSalesCycle: ''
+  });
 
   // Form fields configuration
   const formFields: FormField[] = [
@@ -469,6 +445,46 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   ];
 
+  // Helper function to determine step status
+  const getStepStatus = (stepId: number): Step['status'] => {
+    if (stepId < currentStep) return 'completed';
+    if (stepId === currentStep) return 'current';
+    return 'upcoming';
+  };
+
+  // Steps configuration with getStepStatus now defined
+  const steps = [
+    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
+    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
+    { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
+    { id: 4, title: 'Sales Process', icon: DollarSign, status: getStepStatus(3) },
+    { id: 5, title: 'Typography', icon: Type, status: getStepStatus(4) },
+    { id: 6, title: 'Brand Assets', icon: Palette, status: getStepStatus(5) },
+    { id: 7, title: 'System Integration', icon: Settings, status: getStepStatus(6) }
+  ];
+
+  // Animation variants for consistent animations
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 1
+      }
+    },
+    exit: {
+      opacity: 0,
+      y: -20,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut"
+      }
+    }
+  };
 
   // Update the progress calculation
   const calculateProgress = () => {
@@ -523,9 +539,11 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           return ['campaignName', 'objective'];
         case 2: // Target Audience
           return ['jobTitles', 'industries', 'companySize'];
-        case 3: // Typography
+        case 3: //Sales
+          return ['salesType'];
+        case 4: // Typography
           return ['mainTitleFont', 'subtitleFont', 'bodyTextFont'];
-        case 4: // Brand Assets
+        case 5: // Brand Assets
           return ['brandName', 'mainColor', 'secondaryColor', 'highlightColor'];
         default:
           return [];
@@ -538,7 +556,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   useEffect(() => {
     setFormProgress(calculateProgress());
-  }, [businessDetails, brandAssets, campaign, audience, errors, currentStep]);
+  }, [businessDetails, brandAssets, campaign, audience, errors, currentStep, salesData]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
@@ -614,6 +632,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         setCampaign(prev => ({ ...prev, [name]: value }));
       } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
         setAudience(prev => ({ ...prev, [name]: value }));
+      } else if (name === 'salesType' || name === 'meetingsBeforeProposal' || name === 'proposalConversionRate' || name === 'averageOrderValue' || name === 'billingFrequency' || name === 'averageSalesCycle') {
+        setSalesData(prev => ({ ...prev, [name]: value }));
       } else {
         setBusinessDetails(prev => ({
           ...prev,
@@ -638,7 +658,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
 
     // Validate on blur
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || "");
+    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || salesData[name as keyof typeof salesData] || "");
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -703,7 +723,35 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  // Update the handleStepNavigation function
+  // Event handlers grouped together
+  const handleStepClick = (index: number) => {
+    setAnimatingNav(true);
+    setCurrentStep(index);
+    setTimeout(() => {
+      setAnimatingNav(false);
+    }, 600);
+  };
+
+  const handleIndustrySelect = (industry: string) => {
+    setSelectedIndustries(prev => {
+      const newIndustries = prev.includes(industry)
+        ? prev.filter(i => i !== industry)
+        : [...prev, industry];
+
+      if (industry === 'Other' && !newIndustries.includes('Other')) {
+        setOtherIndustry('');
+      }
+
+      const industriesList = newIndustries.join(', ') + (otherIndustry ? `, ${otherIndustry}` : '');
+      setAudience(prev => ({
+        ...prev,
+        industries: industriesList
+      }));
+
+      return newIndustries;
+    });
+  };
+
   const handleStepNavigation = (direction: 'next' | 'previous') => {
     if (animatingNav) return;
     setAnimatingNav(true);
@@ -715,6 +763,28 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setTimeout(() => {
       setAnimatingNav(false);
     }, 600);
+  };
+
+  // Render function for form content
+  const renderFormContent = () => {
+    switch (currentStep) {
+      case 0:
+        return renderBusinessInfoForm();
+      case 1:
+        return renderCampaignForm();
+      case 2:
+        return renderTargetAudienceForm();
+      case 3:
+        return renderSalesSection();
+      case 4:
+        return renderTypographyForm();
+      case 5:
+        return renderBrandAssetsForm();
+      case 6:
+        return renderSystemIntegrationForm();
+      default:
+        return renderBusinessInfoForm();
+    }
   };
 
   const handleComplete = async () => {
@@ -739,6 +809,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         newTouched[field] = true;
         const error = validateField(field as any, campaign[field as keyof typeof campaign]);
         if (error) {
+          hasErrors = true;
           hasErrors = true;
           newErrors[field] = error;
         }
@@ -775,6 +846,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         ...brandAssets,
         ...campaign,
         ...audience,
+        ...salesData,
         logo: logoFile
       };
 
@@ -796,7 +868,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   };
 
-const renderFormActions = () => {
+  const renderFormActions = () => {
     return (
       <div className="flex justify-between items-center mt-8">
         <div className="flex space-x-3">
@@ -848,22 +920,6 @@ const renderFormActions = () => {
     e.stopPropagation();
     // Share functionality is handled by the ShareSection component
   };
-
-  const getStepStatus = (stepId: number): Step['status'] => {
-    if (stepId < currentStep) return 'completed';
-    if (stepId === currentStep) return 'current';
-    return 'upcoming';
-  };
-
-  // Update steps with current status
-  const steps = [
-    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
-    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
-    { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
-    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
-    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
-    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
-  ];
 
 
   const hasFormErrors = () => {
@@ -1427,59 +1483,171 @@ const renderFormActions = () => {
       case 2:
         return renderTargetAudienceForm();
       case 3:
-        return renderTypographyForm();
+        return renderSalesSection();
       case 4:
-        return renderBrandAssetsForm();
+        return renderTypographyForm();
       case 5:
+        return renderBrandAssetsForm();
+      case 6:
         return renderSystemIntegrationForm();
       default:
         return renderBusinessInfoForm();
     }
   };
 
-  const defaultSteps = [
-    { id: 1, title: 'Business Details', icon: Building2 },
-    { id: 2, title: 'Campaign', icon: Target },
-    { id: 3, title: 'Target Audience', icon: Target },
-    { id: 4, title: 'Typography', icon: Type },
-    { id: 5, title: 'Brand Assets', icon: Palette },
-    { id: 6, title: 'System Integration', icon: Settings }
-  ];
+  const renderSalesSection = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="w-full space-y-8"
+      >
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Sales Process</h2>
+            <p className="text-gray-400 mt-1">Tell us about your sales workflow</p>
+          </div>
+          <ShareSection formId={1} section="Sales Process" />
+        </div>
 
-  const handleStepClick = (index: number) => {
-    setAnimatingNav(true);
-    setCurrentStep(index);
+        <FormSection>
+          <div className="space-y-6">
+            {/* Sales Type Selection */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Sales Process Type</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => setSalesData(prev => ({ ...prev, salesType: 'sales_call' }))}
+                  className={`p-4 border rounded-lg text-left transition-all duration-200 ${
+                    salesData.salesType === 'sales_call'
+                      ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                >
+                  <h3 className="font-medium mb-1">Sales Call & Proposal</h3>
+                  <p className="text-sm opacity-80">Consultative selling with personalized proposals</p>
+                </button>
+                <button
+                  onClick={() => setSalesData(prev => ({ ...prev, salesType: 'website_purchase' }))}
+                  className={`p-4 border rounded-lg text-left transition-all duration-200 ${
+                    salesData.salesType === 'website_purchase'
+                      ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                >
+                  <h3 className="font-medium mb-1">Website Purchase</h3>
+                  <p className="text-sm opacity-80">Self-service online purchasing</p>
+                </button>
+              </div>
+            </div>
 
-    setTimeout(() => {
-      setAnimatingNav(false);
-    }, 600);
+            {/* Conditional fields based on sales type */}
+            {salesData.salesType === 'sales_call' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white">Meetings Before Proposal</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={salesData.meetingsBeforeProposal}
+                    onChange={(e) => setSalesData(prev => ({ ...prev, meetingsBeforeProposal: e.target.value }))}
+                    placeholder="How many meetings before sending a proposal?"
+                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white">Proposal Conversion Rate (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={salesData.proposalConversionRate}
+                    onChange={(e) => setSalesData(prev => ({ ...prev, proposalConversionRate: e.target.value }))}
+                    placeholder="What percentage of proposals convert?"
+                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Common fields for both types */}
+            <div>
+              <label className="block text-sm font-medium text-white">Average Order Value</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={salesData.averageOrderValue}
+                  onChange={(e) => setSalesData(prev => ({ ...prev, averageOrderValue: e.target.value }))}
+                  placeholder="What's your average order value?"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 pl-8 text-gray-200"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white">Billing Frequency</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{['One Off', 'Monthly', 'Quarterly', 'Annual'].map((frequency) => (
+                  <button
+                    key={frequency}
+                    onClick={() => setSalesData(prev => ({ ...prev, billingFrequency: frequency.toLowerCase() }))}
+                    className={`p-3 border rounded-lg text-center transition-all duration-200 ${
+                      salesData.billingFrequency === frequency.toLowerCase()
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                  >
+                    {frequency}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white">Average Sales Cycle</label>
+              <select
+                value={salesData.averageSalesCycle}
+                onChange={(e) => setSalesData(prev => ({ ...prev, averageSalesCycle: e.target.value }))}
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              >
+                <option value="">Select average time from lead to close</option>
+                <option value="1_week">Less than 1 week</option>
+                <option value="2_weeks">1-2 weeks</option>
+                <option value="1_month">2-4 weeks</option>
+                <option value="2_months">1-2 months</option>
+                <option value="3_months">2-3 months</option>
+                <option value="6_months">3-6 months</option>
+                <option value="more_6_months">More than 6 months</option>
+              </select>
+            </div>
+          </div>
+        </FormSection>
+      </motion.div>
+    );
   };
 
-  const handleIndustrySelect = (industry: string) => {
-    if (selectedIndustries.includes(industry)) {
-      setSelectedIndustries(prev => {
-        if (prev.includes(industry)) {
-          // If industry is already selected, remove it
-          return prev.filter(i => i !== industry);
-        } else {
-          // If industry is not selected, add it
-          return [...prev, industry];
-        }
-      });
-
-      // Clear other industry input when deselecting "Other"
-      if (industry === 'Other' && selectedIndustries.includes('Other')) {
-        setOtherIndustry('');
-      }
-
-      // Update the audience state with selected industries
-      const industries = selectedIndustries.join(', ') + (otherIndustry ? `, ${otherIndustry}` : '');
-      setAudience(prev => ({
-        ...prev,
-        industries
-      }));
-    } else {
-      setSelectedIndustries([...selectedIndustries, industry]);
+  const renderFormContent = () => {
+    switch (currentStep) {
+      case 0:
+        return renderBusinessInfoForm();
+      case 1:
+        return renderCampaignForm();
+      case 2:
+        return renderTargetAudienceForm();
+      case 3:
+        return renderSalesSection();
+      case 4:
+        return renderTypographyForm();
+      case 5:
+        return renderBrandAssetsForm();
+      case 6:
+        return renderSystemIntegrationForm();
+      default:
+        return renderBusinessInfoForm();
     }
   };
 
@@ -1503,20 +1671,18 @@ const renderFormActions = () => {
               {renderFormContent()}
             </AnimatePresence>
           </div>
-
           {renderFormActions()}
         </div>
       </div>
     </div>
   );
-};
-
-export default OnboardingForm;
+}
 
 interface BrandAssets {
   brandName: string;
-  logo: File | null;
   mainColor: string;
   secondaryColor: string;
   highlightColor: string;
 }
+
+export default OnboardingForm;
