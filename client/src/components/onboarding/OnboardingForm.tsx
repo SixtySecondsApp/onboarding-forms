@@ -799,13 +799,14 @@ const renderFormActions = () => {
         </div>
         <button
           onClick={handleComplete}
-          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale105 ${
+          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
             isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
           }`}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <>
+              <div className```javascript
               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
               Saving...
             </>
@@ -1563,7 +1564,8 @@ const renderFormActions = () => {
               </div>
             </div>
 
-            <div className="space-y-2<label className="block text-sm font-medium text-white">Average Sales Cycle</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Average Sales Cycle</label>
               <select
                 className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
                 value={salesProcess.salesCycle}
