@@ -41,7 +41,7 @@ export default function AdminAuth() {
   const handleCreateTestUser = async () => {
     setLoading(true);
     try {
-      const testEmail = "test@example.com";
+      const testEmail = "test@gmail.com";
       const testPassword = "password123";
 
       await createTestUser(testEmail, testPassword);
