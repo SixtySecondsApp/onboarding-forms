@@ -47,15 +47,45 @@ export default function AdminAuth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin/dashboard`,
+            // Skip email verification for now
+            data: {
+              email_confirmed: true
+            }
+          }
         });
 
-        if (error) throw error;
+        if (error) {
+          // If error is email not confirmed, try to sign in anyway
+          if (error.message.includes('email not confirmed')) {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (!signInError) {
+              setLocation("/admin/dashboard");
+              return;
+            }
+          }
+          throw error;
+        }
 
-        toast({
-          title: "Success",
-          description: "Registration successful! You can now log in.",
+        // If registration successful, attempt immediate login
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
-        setIsLogin(true);
+
+        if (!signInError) {
+          setLocation("/admin/dashboard");
+        } else {
+          toast({
+            title: "Success",
+            description: "Registration successful! Please log in.",
+          });
+          setIsLogin(true);
+        }
       }
     } catch (error: any) {
       console.error('Auth error:', error);
