@@ -346,6 +346,11 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     locations: ''
   });
 
+  // Added state for selected industries and other industry input
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [otherIndustry, setOtherIndustry] = useState('');
+
+
   // Animation variants for consistent animations
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
@@ -722,6 +727,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
+  // Update the handleStepNavigation function
   const handleStepNavigation = (direction: 'next' | 'previous') => {
     if (animatingNav) return;
     setAnimatingNav(true);
@@ -814,7 +820,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   };
 
-  const renderFormActions = () => {
+const renderFormActions = () => {
     return (
       <div className="flex justify-between items-center mt-8">
         <div className="flex space-x-3">
@@ -1023,21 +1029,21 @@ export function OnboardingForm({ formId, sectionId }: Props) {
             <label className="block text-sm font-medium text-gray-300 mb-2">Color Combination Preview</label>
             <div className="relative w-64 h-64 mx-auto">
               {/* Outer circle - Brand Color */}
-              <div 
+              <div
                 className="absolute inset-0 rounded-full"
                 style={{ backgroundColor: brandAssets.mainColor }}
               />
               {/* Middle circle - Secondary Color */}
-              <div 
+              <div
                 className="absolute inset-8 rounded-full"
                 style={{ backgroundColor: brandAssets.secondaryColor }}
               />
               {/* Center circle with highlight text */}
-              <div 
+              <div
                 className="absolute inset-16 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: 'white' }}
               >
-                <span 
+                <span
                   className="text-lg font-semibold"
                   style={{ color: brandAssets.highlightColor }}
                 >
@@ -1060,104 +1066,96 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-white mb-2">Target Audience</h2>
-          <p className="text-gray-400">Define who you want to reach with your campaign</p>
-        </div>
+        <FormSection>
+          <div className="space-y-6">
+            {/* Target Job Titles */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Target Job Titles</label>
+              <textarea
+                placeholder="Enter job titles, one per line (e.g., Marketing Manager, CEO, IT Director)"
+                className="w-full h-32 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                value={audience.jobTitles}
+                onChange={handleAudienceChange}
+              />
+            </div>
 
-        <div className="space-y-6">
-          {/* Target Job Titles */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">Target Job Titles</label>
-            <textarea
-              placeholder="Enter job titles, one per line (e.g., Marketing Manager, CEO, IT Director)"
-              className="w-full h-32 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-            />
-          </div>
+            {/* Target Industries */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Target Industries</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  'Software & SaaS',
+                  'IT Services & Consulting',
+                  'Financial Services',
+                  'Professional Services',
+                  'Digital Marketing & Advertising',
+                  'Business Services',
+                  'Manufacturing & Industrial',
+                  'Healthcare Technology',
+                  'EdTech & E-Learning',
+                  'Cybersecurity',
+                  'Cloud Services',
+                  'Data Analytics & BI',
+                  'Telecommunications',
+                  'Legal Services',
+                  'Other'
+                ].map(industry => (
+                  <button
+                    key={industry}
+                    onClick={() => handleIndustrySelect(industry)}
+                    className={`p-3 border rounded-lg text-left transition-all duration-200 ${
+                      selectedIndustries.includes(industry)
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                  >
+                    {industry}
+                  </button>
+                ))}
+              </div>
 
-          {/* Target Industries */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">Target Industries</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Software & SaaS
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                IT Services & Consulting
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Financial Services
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Professional Services
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Digital Marketing & Advertising
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Business Services
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Manufacturing & Industrial
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Healthcare Technology
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                EdTech & E-Learning
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Cybersecurity
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Cloud Services
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Data Analytics & BI
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Telecommunications
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Legal Services
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Other
-              </button>
+              {/* Other Industry Input */}
+              {selectedIndustries.includes('Other') && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={otherIndustry}
+                    onChange={(e) => setOtherIndustry(e.target.value)}
+                    placeholder="Please specify other industries"
+                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Target Company Sizes */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Target Company Sizes</label>
+              <select
+                value={audience.companySize}
+                onChange={handleAudienceChange}
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                name="companySize"
+              >
+                <option value="">Select company size</option>
+                {audienceFields[2].options?.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Target Locations */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white">Target Locations</label>
+              <textarea
+                placeholder="Enter target locations (e.g., North America, Europe, Global)"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                value={audience.locations}
+                onChange={handleAudienceChange}
+              />
             </div>
           </div>
-
-          {/* Target Company Sizes */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">Target Company Sizes</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Startups
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Small businesses (1-50)
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Medium businesses (51-500)
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                Large enterprises (500+)
-              </button>
-              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
-                All company sizes
-              </button>
-            </div>
-          </div>
-
-          {/* Target Locations */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-white">Target Locations</label>
-            <textarea
-              placeholder="Enter target locations (e.g., North America, Europe, Global)"
-              className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-            />
-          </div>
-        </div>
+        </FormSection>
       </motion.div>
     );
   };
@@ -1453,25 +1451,18 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   ];
 
   const handleStepClick = (index: number) => {
-    if (getStepStatus(index) !== 'upcoming' && !animatingNav) {
-      setAnimatingNav(true);
-      setCurrentStep(index);
+    setAnimatingNav(true);
+    setCurrentStep(index);
 
-      setTimeout(() => {
-        setAnimatingNav(false);
-      }, 600);
-    }
+    setTimeout(() => {
+      setAnimatingNav(false);
+    }, 600);
   };
 
   return (
     <div className="min-h-screen bg-[#181c24] flex flex-col md:flex-row">
       {/* Side Navigation */}
-      <div className="w-full md:w-80 lg:w-96 border-r border-gray-800 p-6 flex flex-col bg-[#1a1f28]/50 backdrop-blur-sm">
-        <div className="flex items-center mb-8">
-          <h1 className="text-2xl font-bold text-white">Campaign Setup</h1>
-        </div>
-        <p className="text-sm text-gray-400 mb-10">Complete your onboarding</p>
-
+      <div className="w-full md:w-64 p-6 border-b md:border-r border-gray-800">
         <ProgressTracker
           steps={steps}
           currentStep={currentStep}
@@ -1483,17 +1474,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       {/* Main Content Area */}
       <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Header with Share Button */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Business Details</h2>
-              <p className="text-gray-400 mt-1">Tell us about your business</p>
-            </div>
-            <ShareSection formId={1} section="Business Details" />
-          </div>
-
-          {/* Form Content */}
-          <div className="mb-8">
+          <div className="relative">
             <AnimatePresence mode="wait">
               {renderFormContent()}
             </AnimatePresence>
@@ -1504,7 +1485,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       </div>
     </div>
   );
-}
+};
+
+export default OnboardingForm;
 
 interface BrandAssets {
   brandName: string;
