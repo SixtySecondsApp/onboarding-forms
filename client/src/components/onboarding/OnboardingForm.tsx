@@ -56,7 +56,12 @@ const FormField = ({
 }) => {
   const { label, name, icon: Icon, placeholder, type = 'text', options = null, hint = null } = field;
   const hasError = touched[name] && errors[name];
-  const isValid = touched[name] && !errors[name] && value && value.trim() !== ''; // Updated validation
+  // A field is only valid if:
+  // 1. It has been touched
+  // 2. Has no errors
+  // 3. Has a value
+  // 4. For text fields, the value is not just whitespace
+  const isValid = touched[name] && !errors[name] && value && (type === 'select' ? true : value.trim() !== '');
   const inputId = `field-${name}`;
 
   return (
@@ -131,7 +136,7 @@ const FormField = ({
           />
         )}
 
-        {isValid && !hasError && ( // Updated condition
+        {isValid && !hasError && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
@@ -169,6 +174,55 @@ const FormField = ({
       {hasError && <p id={`${name}-error`} className="sr-only">{errors[name]}</p>}
     </div>
   );
+};
+
+const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
+  let error = '';
+
+  // Don't validate empty optional fields
+  if (!value && ['linkedin', 'website'].includes(name)) {
+    return error;
+  }
+
+  switch (name) {
+    case 'name':
+      if (!value.trim()) error = 'Business name is required';
+      else if (value.length < 2) error = 'Name must be at least 2 characters';
+      break;
+    case 'type':
+      if (!value) error = 'Please select a business type';
+      break;
+    case 'website':
+      if (value && !/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
+        error = 'Please enter a valid URL starting with http:// or https://';
+      break;
+    case 'phone':
+      if (!value) error = 'Phone number is required';
+      else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
+        error = 'Please enter a valid phone number: +1 (555) 555-5555';
+      break;
+    case 'location':
+      if (!value.trim()) error = 'Location is required';
+      else if (value.length < 3) error = 'Location should be at least 3 characters';
+      break;
+    case 'campaignName':
+      if (!value.trim()) error = 'Campaign name is required';
+      break;
+    case 'objective':
+      if (!value) error = 'Please select a campaign objective';
+      break;
+    case 'jobTitles':
+      if (!value.trim()) error = 'Job titles are required';
+      break;
+    case 'industries':
+      if (!value) error = 'Please select at least one industry';
+      break;
+    case 'companySize':
+      if (!value) error = 'Please select a company size';
+      break;
+  }
+
+  return error;
 };
 
 const FormSection = ({ title, icon: Icon, children, onShareSection }: {
@@ -435,64 +489,74 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
 
   // Update the progress calculation
-  useEffect(() => {
-    const calculateProgress = () => {
-      let validFields = 0;
-      let totalFields = 0;
+  const calculateProgress = () => {
+    // Helper function to check if a field is valid
+    const isFieldValid = (value: any, fieldName: string) => {
+      // Skip optional fields if they're empty
+      if (['linkedin', 'website'].includes(fieldName) && (!value || value.trim() === '')) {
+        return true;
+      }
 
-      // Helper function to check if a field is valid
-      const isFieldValid = (value: any, fieldName: string) => {
-        if (typeof value === 'string') {
-          return value.trim() !== '' && !errors[fieldName];
-        }
-        if (fieldName === 'logo') {
-          return value !== null;
-        }
-        if (['mainColor', 'secondaryColor', 'highlightColor'].includes(fieldName)) {
-          return true; // Colors always have a default value
-        }
-        return false;
-      };
-
-      // Count business details fields
-      Object.entries(businessDetails).forEach(([key, value]) => {
-        totalFields++;
-        if (isFieldValid(value, key)) {
-          validFields++;
-        }
-      });
-
-      // Count brand assets fields
-      Object.entries(brandAssets).forEach(([key, value]) => {
-        totalFields++;
-        if (isFieldValid(value, key)) {
-          validFields++;
-        }
-      });
-
-      // Count campaign fields
-      Object.entries(campaign).forEach(([key, value]) => {
-        if (key !== 'keyMessages' && key !== 'callToAction') { // Optional fields
-          totalFields++;
-          if (isFieldValid(value, key)) {
-            validFields++;
-          }
-        }
-      });
-
-      // Count audience fields
-      Object.entries(audience).forEach(([key, value]) => {
-        totalFields++;
-        if (isFieldValid(value, key)) {
-          validFields++;
-        }
-      });
-
-      return Math.round((validFields / totalFields) * 100);
+      if (typeof value === 'string') {
+        return value.trim() !== '' && !errors[fieldName];
+      }
+      if (fieldName === 'logo') {
+        return value !== null;
+      }
+      if (['mainColor', 'secondaryColor', 'highlightColor'].includes(fieldName)) {
+        return true; // Colors always have a default value
+      }
+      return false;
     };
 
+    let totalRequiredFields = 0;
+    let validFields = 0;
+
+    // Required fields from businessDetails
+    const requiredBusinessFields = ['name', 'type', 'phone', 'location'];
+    requiredBusinessFields.forEach(field => {
+      totalRequiredFields++;
+      if (isFieldValid(businessDetails[field as keyof BusinessDetails], field)) {
+        validFields++;
+      }
+    });
+
+    // Optional fields (don't count towards total if empty)
+    ['website', 'linkedin'].forEach(field => {
+      const value = businessDetails[field as keyof BusinessDetails];
+      if (value && value.trim() !== '') {
+        totalRequiredFields++;
+        if (isFieldValid(value, field)) {
+          validFields++;
+        }
+      }
+    });
+
+    // Required fields for the current step
+    const currentStepFields = (() => {
+      switch (currentStep) {
+        case 0: // Business Details
+          return requiredBusinessFields;
+        case 1: // Campaign
+          return ['campaignName', 'objective'];
+        case 2: // Target Audience
+          return ['jobTitles', 'industries', 'companySize'];
+        case 3: // Typography
+          return ['mainTitleFont', 'subtitleFont', 'bodyTextFont'];
+        case 4: // Brand Assets
+          return ['brandName', 'mainColor', 'secondaryColor', 'highlightColor'];
+        default:
+          return [];
+      }
+    })();
+
+    // Update form progress
+    return Math.round((validFields / Math.max(totalRequiredFields, 1)) * 100);
+  };
+
+  useEffect(() => {
     setFormProgress(calculateProgress());
-  }, [businessDetails, brandAssets, campaign, audience, errors]);
+  }, [businessDetails, brandAssets, campaign, audience, errors, currentStep]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
@@ -507,6 +571,11 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
     let error = '';
 
+    // Don't validate empty optional fields
+    if (!value && ['linkedin', 'website'].includes(name)) {
+      return error;
+    }
+
     switch (name) {
       case 'name':
         if (!value.trim()) error = 'Business name is required';
@@ -516,15 +585,17 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         if (!value) error = 'Please select a business type';
         break;
       case 'website':
-        if (value && !/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
-          error = 'Please enter a valid URL (e.g., https://example.com)';
+        if (value && !/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
+          error = 'Please enter a valid URL starting with http:// or https://';
         break;
       case 'phone':
-        if (value && !/^(\+\d{1,3}\s?)?(\(\d{3}\)\s?\d{3}-\d{4}|\d{10})$/.test(value))
-          error = 'Please enter a valid phone number';
+        if (!value) error = 'Phone number is required';
+        else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
+          error = 'Please enter a valid phone number: +1 (555) 555-5555';
         break;
       case 'location':
-        if (value && value.length < 3) error = 'Location should be at least 3 characters';
+        if (!value.trim()) error = 'Location is required';
+        else if (value.length < 3) error = 'Location should be at least 3 characters';
         break;
       case 'campaignName':
         if (!value.trim()) error = 'Campaign name is required';
