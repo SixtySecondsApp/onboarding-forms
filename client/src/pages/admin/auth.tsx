@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, createTestUser } from "@/lib/supabase";
 
+// Basic email validation
+const isValidEmail = (email: string) => {
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+  return emailRegex.test(email);
+};
+
 export default function AdminAuth() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -16,6 +22,16 @@ export default function AdminAuth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!isValidEmail(email)) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a valid email address",
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -41,7 +57,9 @@ export default function AdminAuth() {
   const handleCreateTestUser = async () => {
     setLoading(true);
     try {
-      const testEmail = "test@gmail.com";
+      // Generate a unique test email address
+      const uniqueId = Math.random().toString(36).substring(2, 8);
+      const testEmail = `test.${uniqueId}@replit-test.com`;
       const testPassword = "password123";
 
       await createTestUser(testEmail, testPassword);
