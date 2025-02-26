@@ -6,6 +6,7 @@ import { ShareSection } from './ShareSection';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast"; // Updated import path
 
 interface Props {
   formId: string;
@@ -721,97 +722,149 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleContinue = async () => {
+  const handleStepNavigation = (direction: 'next' | 'previous') => {
     if (animatingNav) return;
-
-    // Validate all fields before continuing
-    let errors = {};
-
-    switch (currentStep) {
-      case 0:
-        errors = validateBrandAssets();
-        break;
-      case 1:
-        errors = validateBusinessInfo();
-        break;
-      case 2:
-        // Validate audience fields
-        for (const field of audienceFields) {
-          const error = validateField(field.name, audience[field.name]);
-          if (error) {
-            errors[field.name] = error;
-          }
-        }
-        break;
-      case 3:
-        // Validate campaign fields
-        for (const field of campaignFields) {
-          const error = validateField(field.name, campaign[field.name]);
-          if (error) {
-            errors[field.name] = error;
-          }
-        }
-        break;
-      // Add other validation cases
+    setAnimatingNav(true);
+    if (direction === 'next') {
+      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+    } else {
+      setCurrentStep(prev => Math.max(prev - 1, 0));
     }
+    setTimeout(() => {
+      setAnimatingNav(false);
+    }, 600);
+  };
 
-    if (Object.keys(errors).length > 0) {
-      setErrors(errors);
+  const handleComplete = async () => {
+    // Validate all fields before completing
+    let hasErrors = false;
+    const newErrors: Record<string, string> = {};
+    const newTouched: Record<string, boolean> = {};
+
+    // Validate business details
+    Object.keys(businessDetails).forEach(field => {
+      newTouched[field] = true;
+      const error = validateField(field as keyof BusinessDetails, businessDetails[field as keyof BusinessDetails]);
+      if (error) {
+        hasErrors = true;
+        newErrors[field] = error;
+      }
+    });
+
+    // Validate campaign fields
+    Object.keys(campaign).forEach(field => {
+      if (field !== 'keyMessages' && field !== 'callToAction') { // Optional fields
+        newTouched[field] = true;
+        const error = validateField(field as any, campaign[field as keyof typeof campaign]);
+        if (error) {
+          hasErrors = true;
+          newErrors[field] = error;
+        }
+      }
+    });
+
+    // Validate audience fields
+    Object.keys(audience).forEach(field => {
+      newTouched[field] = true;
+      const error = validateField(field as any, audience[field as keyof typeof audience]);
+      if (error) {
+        hasErrors = true;
+        newErrors[field] = error;
+      }
+    });
+
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (hasErrors) {
+      // Show error toast
+      useToast({ // Using the corrected import
+        title: "Please fix the errors",
+        description: "Some required fields are missing or invalid",
+        variant: "destructive"
+      });
       return;
     }
 
-    // Update form data with brand assets
-    const formData = {
-      ...businessDetails,
-      ...brandAssets,
-      ...campaign,
-      ...audience,
-      logo: logoFile
-    };
-
     try {
       setIsSubmitting(true);
-      await updateFormMutation.mutateAsync(formData);
-      setAnimatingNav(true);
-      setCurrentStep(prev => Math.min(prev + 1, defaultSteps.length - 1));
+      const formData = {
+        ...businessDetails,
+        ...brandAssets,
+        ...campaign,
+        ...audience,
+        logo: logoFile
+      };
 
-      // Reset animation lock after animation completes
-      setTimeout(() => {
-        setAnimatingNav(false);
-      }, 600);
+      await updateFormMutation.mutateAsync(formData);
+      useToast({ // Using the corrected import
+        title: "Success!",
+        description: "Your form has been completed successfully",
+        variant: "default"
+      });
     } catch (error) {
       console.error('Error saving form:', error);
-      // Handle error appropriately
+      useToast({ // Using the corrected import
+        title: "Error",
+        description: "Failed to save the form. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleStepClick = (index: number) => {
-    if (getStepStatus(index) !== 'upcoming' && !animatingNav) {
-      setAnimatingNav(true);
-      setCurrentStep(index);
-
-      setTimeout(() => {
-        setAnimatingNav(false);
-      }, 600);
-    }
+  const renderFormActions = () => {
+    return (
+      <div className="flex justify-between items-center mt-8">
+        <div className="flex space-x-3">
+          {currentStep > 0 && (
+            <button
+              onClick={() => handleStepNavigation('previous')}
+              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
+              disabled={animatingNav}
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Previous
+            </button>
+          )}
+          {currentStep < steps.length - 1 && (
+            <button
+              onClick={() => handleStepNavigation('next')}
+              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
+              disabled={animatingNav}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={handleComplete}
+          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
+            isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+              Saving...
+            </>
+          ) : (
+            <>
+              Complete
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </>
+          )}
+        </button>
+      </div>
+    );
   };
 
   const handleShareSection = (e: React.MouseEvent, sectionTitle: string) => {
     e.stopPropagation();
     // Share functionality is handled by the ShareSection component
-  };
-
-  const handlePrevious = () => {
-    if (animatingNav || currentStep <= 0) return;
-
-    setAnimatingNav(true);
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-
-    setTimeout(() => {
-      setAnimatingNav(false);
-    }, 600);
   };
 
   const getStepStatus = (stepId: number): Step['status'] => {
@@ -1169,13 +1222,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           {/* Header with Share Button */}
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-2xl font-bold text-white">Business Details</h2>
-              <p className="text-gray-400mt-1">Tell us about your business</p>
+              <p className="text-gray-400 mt-1">Tell us about your business</p>
             </div>
             <ShareSection formId={1} section="Business Details" />
           </div>
@@ -1187,53 +1240,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
             </AnimatePresence>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-between items-center sticky bottom-0 bg-[#181c24]/90 backdrop-blur-sm py-4 border-t border-gray-800 mt-auto">
-            <div className="text-sm text-gray-500">
-              {hasFormErrors() && (
-                <span className="text-red-400 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  Please fix the errors before continuing
-                </span>
-              )}
-            </div>
-            <div className="flex space-x-3">
-              {currentStep > 0 && (
-                <button
-                  onClick={handlePrevious}
-                  className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration200 flex items-center transform hover:scale-105"
-                  disabled={animatingNav || isSubmitting}
-                  aria-label="Go to previous step"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Previous
-                </button>
-              )}
-              <button
-                onClick={handleContinue}
-                className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
-                  (animatingNav || hasFormErrors() || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-                disabled={animatingNav || hasFormErrors() || isSubmitting}
-                aria-label="Continue to next step"
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="mr-2">Saving...</span>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          {renderFormActions()}
         </div>
       </div>
     </div>
