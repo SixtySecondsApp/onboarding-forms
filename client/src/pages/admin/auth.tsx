@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase, createTestUser } from "@/lib/supabase";
 
 export default function AdminAuth() {
   const [, setLocation] = useLocation();
@@ -31,6 +31,33 @@ export default function AdminAuth() {
         variant: "destructive",
         title: "Error",
         description: "Invalid login credentials",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTestUser = async () => {
+    setLoading(true);
+    try {
+      const testEmail = "test@example.com";
+      const testPassword = "password123";
+
+      await createTestUser(testEmail, testPassword);
+
+      toast({
+        title: "Success",
+        description: `Test user created! Email: ${testEmail}, Password: ${testPassword}`,
+      });
+
+      // Auto-fill the form
+      setEmail(testEmail);
+      setPassword(testPassword);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create test user. The user might already exist.",
       });
     } finally {
       setLoading(false);
@@ -70,6 +97,17 @@ export default function AdminAuth() {
             >
               {loading ? "Loading..." : "Login"}
             </Button>
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreateTestUser}
+                disabled={loading}
+                className="w-full mt-2"
+              >
+                Create Test Account
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
