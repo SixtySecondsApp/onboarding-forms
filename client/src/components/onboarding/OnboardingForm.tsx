@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload } from 'lucide-react';
-import { ProgressTracker, defaultSteps, type Step } from './ProgressTracker';
+import { ProgressTracker, type Step } from './ProgressTracker';
 import { ShareSection } from './ShareSection';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -29,7 +29,7 @@ const formatPhoneNumber = (value: string) => {
 
 interface FormField {
   label: string;
-  name: keyof BusinessDetails;
+  name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize";
   icon: any;
   placeholder: string;
   type?: string;
@@ -204,9 +204,9 @@ const FormSection = ({ title, icon: Icon, children, onShareSection }: {
   );
 };
 
-const Input = ({ id, placeholder, className, value, onChange }: { id: string; placeholder: string; className: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
+const Input = ({ id, type = "text", placeholder, className, value, onChange }: { id: string; type?: string; placeholder: string; className: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <input
-    type="text"
+    type={type}
     id={id}
     placeholder={placeholder}
     value={value}
@@ -226,7 +226,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   });
 
   const updateFormMutation = useMutation({
-    mutationFn: async (data: any) => { // Updated to accept any type of data
+    mutationFn: async (data: any) => {
       if (sectionId) {
         await apiRequest("PATCH", `/api/sections/${sectionId}/data`, data);
       } else {
@@ -241,7 +241,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     },
   });
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [animatingNav, setAnimatingNav] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
     name: '',
@@ -274,6 +274,22 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
 
+  // Add new state for campaign and audience data
+  const [campaign, setCampaign] = useState({
+    campaignName: '',
+    objective: '',
+    startDate: '',
+    endDate: '',
+    keyMessages: '',
+    callToAction: ''
+  });
+
+  const [audience, setAudience] = useState({
+    jobTitles: '',
+    industries: '',
+    companySize: '',
+    locations: ''
+  });
 
   // Animation variants for consistent animations
   const fadeInUp = {
@@ -356,10 +372,72 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   ];
 
+  //New fields from edited code
+  const campaignFields = [
+    {
+      label: "Campaign Name",
+      name: "campaignName",
+      icon: Target,
+      placeholder: "What is your campaign called?",
+      type: "text"
+    },
+    {
+      label: "Campaign Objective",
+      name: "objective",
+      icon: Target,
+      placeholder: "Select an objective",
+      type: "select",
+      options: [
+        { value: 'awareness', label: 'Brand Awareness' },
+        { value: 'leads', label: 'Lead Generation' },
+        { value: 'sales', label: 'Sales' },
+        { value: 'engagement', label: 'Engagement' }
+      ]
+    }
+  ];
+
+  const audienceFields = [
+    {
+      label: "Job Titles",
+      name: "jobTitles",
+      icon: Target,
+      placeholder: "Enter target job titles",
+      type: "text"
+    },
+    {
+      label: "Industries",
+      name: "industries",
+      icon: Building2,
+      placeholder: "Select target industries",
+      type: "select",
+      options: [
+        { value: 'tech', label: 'Technology' },
+        { value: 'finance', label: 'Finance' },
+        { value: 'healthcare', label: 'Healthcare' },
+        { value: 'retail', label: 'Retail' }
+      ]
+    },
+    {
+      label: "Company Size",
+      name: "companySize",
+      icon: Building2,
+      placeholder: "Select company size",
+      type: "select",
+      options: [
+        { value: '1-10', label: '1-10 employees' },
+        { value: '11-50', label: '11-50 employees' },
+        { value: '51-200', label: '51-200 employees' },
+        { value: '201-500', label: '201-500 employees' },
+        { value: '500+', label: '500+ employees' }
+      ]
+    }
+  ];
+
+
   // Calculate form completion progress
   useEffect(() => {
-    const totalFields = Object.keys(businessDetails).length;
-    const filledFields = Object.entries(businessDetails).filter(([key, value]) => {
+    const totalFields = Object.keys(businessDetails).length + Object.keys(brandAssets).length + Object.keys(campaign).length + Object.keys(audience).length;
+    const filledFields = Object.entries({...businessDetails, ...brandAssets, ...campaign, ...audience}).filter(([key, value]) => {
       if (typeof value === 'string') {
         return value.trim() !== '';
       }
@@ -374,7 +452,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       return false;
     }).length;
     setFormProgress(Math.round((filledFields / totalFields) * 100));
-  }, [businessDetails]);
+  }, [businessDetails, brandAssets, campaign, audience]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
@@ -386,7 +464,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
 
   // Enhanced validation with real-time feedback and more detailed error messages
-  const validateField = (name: keyof BusinessDetails, value: string) => {
+  const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
     let error = '';
 
     switch (name) {
@@ -408,6 +486,21 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       case 'location':
         if (value && value.length < 3) error = 'Location should be at least 3 characters';
         break;
+      case 'campaignName':
+        if (!value.trim()) error = 'Campaign name is required';
+        break;
+      case 'objective':
+        if (!value) error = 'Please select a campaign objective';
+        break;
+      case 'jobTitles':
+        if (!value.trim()) error = 'Job titles are required';
+        break;
+      case 'industries':
+        if (!value) error = 'Please select at least one industry';
+        break;
+      case 'companySize':
+        if (!value) error = 'Please select a company size';
+        break;
     }
 
     return error;
@@ -424,14 +517,20 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         [name]: formattedValue
       }));
     } else {
-      setBusinessDetails(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      if (name === "campaignName" || name === "objective" || name === "startDate" || name === "endDate" || name === "keyMessages" || name === "callToAction") {
+        setCampaign(prev => ({ ...prev, [name]: value }));
+      } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
+        setAudience(prev => ({ ...prev, [name]: value }));
+      } else {
+        setBusinessDetails(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      }
     }
 
     // Validate on change
-    const error = validateField(name as keyof BusinessDetails, name === 'phone' ? formatPhoneNumber(value) : value);
+    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -446,7 +545,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
 
     // Validate on blur
-    const error = validateField(name as keyof BusinessDetails, businessDetails[name as keyof BusinessDetails]);
+    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || "");
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -497,6 +596,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     return errors;
   };
 
+  const handleCampaignChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCampaign(prev => ({ ...prev, [name]: value }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleAudienceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setAudience(prev => ({ ...prev, [name]: value }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
 
   const handleContinue = async () => {
     if (animatingNav) return;
@@ -511,6 +623,24 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       case 1:
         errors = validateBusinessInfo();
         break;
+      case 2:
+        // Validate audience fields
+        for (const field of audienceFields) {
+          const error = validateField(field.name, audience[field.name]);
+          if (error) {
+            errors[field.name] = error;
+          }
+        }
+        break;
+      case 3:
+        // Validate campaign fields
+        for (const field of campaignFields) {
+          const error = validateField(field.name, campaign[field.name]);
+          if (error) {
+            errors[field.name] = error;
+          }
+        }
+        break;
       // Add other validation cases
     }
 
@@ -523,6 +653,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     const formData = {
       ...businessDetails,
       ...brandAssets,
+      ...campaign,
+      ...audience,
       logo: logoFile
     };
 
@@ -578,10 +710,15 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   };
 
   // Update steps with current status
-  const steps = defaultSteps.map((step, index) => ({
-    ...step,
-    status: getStepStatus(index)
-  }));
+  const steps = [
+    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
+    { id: 2, title: 'Target Audience', icon: Target, status: getStepStatus(1) },
+    { id: 3, title: 'Campaign', icon: Target, status: getStepStatus(2) },
+    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
+    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
+    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
+  ];
+
 
   const hasFormErrors = () => {
     return Object.values(errors).some(error => error !== '');
@@ -678,7 +815,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
                 />
                 <label
                   htmlFor="logo-upload"
-                  className="cursor-pointer flex flex-col items-center justify-center"
+                  className="cursor-pointer flex flex-col items-centerjustify-center"
                 >
                   {logoPreview ? (
                     <img src={logoPreview} alt="Logo preview" className="max-h-32 mb-2" />
@@ -740,9 +877,30 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="flex items-center justify-center h-48"
+        className="w-full space-y-8"
       >
-        <p className="text-gray-400">Target Audience Form</p>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white mb-2">Target Audience</h2>
+          <p className="text-gray-400">Define your ideal customer profile</p>
+        </div>
+
+        <FormSection
+          title="Audience Criteria"
+          icon={Target}
+          onShareSection={handleShareSection}
+        >
+          {audienceFields.map((field) => (
+            <FormField
+              key={field.name}
+              field={field}
+              value={audience[field.name]}
+              onChange={handleAudienceChange}
+              onBlur={handleBlur}
+              errors={errors}
+              touched={touched}
+            />
+          ))}
+        </FormSection>
       </motion.div>
     );
   };
@@ -754,9 +912,74 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="flex items-center justify-center h-48"
+        className="w-full space-y-8"
       >
-        <p className="text-gray-400">Campaign Form</p>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white mb-2">Campaign Information</h2>
+          <p className="text-gray-400">Define your campaign goals and content</p>
+        </div>
+
+        <FormSection
+          title="Campaign Details"
+          icon={Target}
+          onShareSection={handleShareSection}
+        >
+          {campaignFields.map((field) => (
+            <FormField
+              key={field.name}
+              field={field}
+              value={campaign[field.name]}
+              onChange={handleCampaignChange}
+              onBlur={handleBlur}
+              errors={errors}
+              touched={touched}
+            />
+          ))}
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Campaign Timeline</label>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="startDate"
+                type="date"
+                placeholder="Start Date"
+                className="w-full"
+                value={campaign.startDate}
+                onChange={handleCampaignChange}
+              />
+              <Input
+                id="endDate"
+                type="date"
+                placeholder="End Date"
+                className="w-full"
+                value={campaign.endDate}
+                onChange={handleCampaignChange}
+              />
+            </div>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Key Messages</label>
+            <textarea
+              id="keyMessages"
+              value={campaign.keyMessages}
+              onChange={handleCampaignChange}
+              placeholder="Enter your key messages (one per line)"
+              className="w-full h-32 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Call to Action</label>
+            <Input
+              id="callToAction"
+              value={campaign.callToAction}
+              onChange={handleCampaignChange}
+              placeholder="e.g., 'Sign up for a demo', 'Download our guide'"
+              className="w-full"
+            />
+          </div>
+        </FormSection>
       </motion.div>
     );
   };
@@ -791,32 +1014,31 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   const renderFormContent = () => {
     switch (currentStep) {
-      case 1:
+      case 0:
         return renderBusinessInfoForm();
-      case 2:
+      case 1:
         return renderTargetAudienceForm();
-      case 3:
+      case 2:
         return renderCampaignForm();
-      case 4:
+      case 3:
         return renderTypographyForm();
-      case 5:
+      case 4:
         return renderBrandAssetsForm();
-      case 6:
+      case 5:
         return renderSystemIntegrationForm();
       default:
-        return (
-          <motion.div
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="flex items-center justify-center h-48"
-          >
-            <p className="text-gray-400">Step {currentStep + 1} content</p>
-          </motion.div>
-        );
+        return renderBusinessInfoForm();
     }
   };
+
+  const defaultSteps = [
+    { id: 1, title: 'Business Details', icon: Building2 },
+    { id: 2, title: 'Target Audience', icon: Target },
+    { id: 3, title: 'Campaign', icon: Target },
+    { id: 4, title: 'Typography', icon: Type },
+    { id: 5, title: 'Brand Assets', icon: Palette },
+    { id: 6, title: 'System Integration', icon: Settings }
+  ];
 
   return (
     <div className="min-h-screen bg-[#181c24] flex flex-col md:flex-row">
