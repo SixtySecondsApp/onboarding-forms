@@ -617,7 +617,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           icon={Building2}
           onShareSection={handleShareSection}
         >
-          {formFields.slice(0, 2).map((field, index) => (
+          {formFields.map((field) => (
             <FormField
               key={field.name}
               field={field}
@@ -626,25 +626,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
               onBlur={handleBlur}
               errors={errors}
               touched={touched}
-              autoFocus={index === 0}
-            />
-          ))}
-        </FormSection>
-
-        <FormSection
-          title="Contact Information"
-          icon={Phone}
-          onShareSection={handleShareSection}
-        >
-          {formFields.slice(2).map((field) => (
-            <FormField
-              key={field.name}
-              field={field}
-              value={businessDetails[field.name]}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={errors}
-              touched={touched}
+              autoFocus={field.name === 'name'}
             />
           ))}
         </FormSection>
@@ -812,13 +794,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       case 1:
         return renderBusinessInfoForm();
       case 2:
-        return renderBrandAssetsForm();
-      case 3:
         return renderTargetAudienceForm();
-      case 4:
+      case 3:
         return renderCampaignForm();
-      case 5:
+      case 4:
         return renderTypographyForm();
+      case 5:
+        return renderBrandAssetsForm();
       case 6:
         return renderSystemIntegrationForm();
       default:
@@ -860,7 +842,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-2xl font-bold text-white">Business Details</h2>
-              <p className="text-gray-400 mt-1">Tell us about your business</p>
+              <p className="text-gray-400mt-1">Tell us about your business</p>
             </div>
             <ShareSection formId={1} section="Business Details" />
           </div>
