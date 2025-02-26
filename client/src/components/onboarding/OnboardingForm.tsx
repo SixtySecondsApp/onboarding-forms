@@ -712,8 +712,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   // Update steps with current status
   const steps = [
     { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
-    { id: 2, title: 'Target Audience', icon: Target, status: getStepStatus(1) },
-    { id: 3, title: 'Campaign', icon: Target, status: getStepStatus(2) },
+    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
+    { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
     { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
     { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
     { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
@@ -1017,9 +1017,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       case 0:
         return renderBusinessInfoForm();
       case 1:
-        return renderTargetAudienceForm();
-      case 2:
         return renderCampaignForm();
+      case 2:
+        return renderTargetAudienceForm();
       case 3:
         return renderTypographyForm();
       case 4:
@@ -1033,8 +1033,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   const defaultSteps = [
     { id: 1, title: 'Business Details', icon: Building2 },
-    { id: 2, title: 'Target Audience', icon: Target },
-    { id: 3, title: 'Campaign', icon: Target },
+    { id: 2, title: 'Campaign', icon: Target },
+    { id: 3, title: 'Target Audience', icon: Target },
     { id: 4, title: 'Typography', icon: Type },
     { id: 5, title: 'Brand Assets', icon: Palette },
     { id: 6, title: 'System Integration', icon: Settings }
