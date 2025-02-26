@@ -32,13 +32,13 @@ export const formSections = pgTable("form_sections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ 
+export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  createdAt: true 
+  createdAt: true
 });
 
-export const insertFormSchema = createInsertSchema(onboardingForms).omit({ 
-  id: true, 
+export const insertFormSchema = createInsertSchema(onboardingForms).omit({
+  id: true,
   createdAt: true,
   lastReminder: true,
   progress: true,
@@ -69,4 +69,52 @@ export const businessDetailsSchema = z.object({
   location: z.string().min(3, "Location must be at least 3 characters"),
 });
 
+export const targetAudienceSchema = z.object({
+  jobTitles: z.array(z.string()),
+  industries: z.array(z.string()),
+  companySizes: z.array(z.string()),
+  locations: z.array(z.string()),
+});
+
+export const campaignSchema = z.object({
+  name: z.string().min(1, "Campaign name is required"),
+  objective: z.string().min(1, "Campaign objective is required"),
+  startDate: z.string(),
+  endDate: z.string(),
+  keyMessages: z.array(z.string()),
+  callToAction: z.string(),
+});
+
+
+export const typographySchema = z.object({
+  mainTitleFont: z.string(),
+  subtitleFont: z.string(),
+  bodyTextFont: z.string(),
+});
+
+export const brandAssetsSchema = z.object({
+  brandName: z.string(),
+  logoUrl: z.string().optional(),
+  mainColor: z.string(),
+  secondaryColor: z.string(),
+  highlightColor: z.string(),
+});
+
+export const systemIntegrationSchema = z.object({
+  crmSystem: z.string(),
+  crmInstance: z.string().optional(),
+  crmAccess: z.string().optional(),
+  calendarSystem: z.string().optional(),
+  calendarTool: z.string().optional(),
+  leadCaptureProcess: z.string().optional(),
+  statusChanges: z.string().optional(),
+  notifications: z.string().optional(),
+  otherFeatures: z.string().optional(),
+});
+
 export type BusinessDetails = z.infer<typeof businessDetailsSchema>;
+export type TargetAudience = z.infer<typeof targetAudienceSchema>;
+export type Campaign = z.infer<typeof campaignSchema>;
+export type Typography = z.infer<typeof typographySchema>;
+export type BrandAssets = z.infer<typeof brandAssetsSchema>;
+export type SystemIntegration = z.infer<typeof systemIntegrationSchema>;

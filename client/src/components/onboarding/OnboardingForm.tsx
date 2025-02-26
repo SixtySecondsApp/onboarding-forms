@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload } from 'lucide-react';
 import { ProgressTracker, defaultSteps, type Step } from './ProgressTracker';
 import { ShareSection } from './ShareSection';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
@@ -37,15 +37,15 @@ interface FormField {
   hint?: string;
 }
 
-const FormField = ({ 
-  field, 
-  value, 
-  onChange, 
-  onBlur, 
-  errors, 
-  touched, 
-  autoFocus = false 
-}: { 
+const FormField = ({
+  field,
+  value,
+  onChange,
+  onBlur,
+  errors,
+  touched,
+  autoFocus = false
+}: {
   field: FormField;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -78,14 +78,14 @@ const FormField = ({
         )}
       </label>
       <div className={`relative border rounded-lg overflow-hidden bg-gray-800/50 group hover:border-gray-600 transition-all duration-200 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:border-emerald-500 
-        ${hasError 
-          ? 'border-red-400 focus-within:border-red-400 focus-within:ring-red-400' 
+        ${hasError
+          ? 'border-red-400 focus-within:border-red-400 focus-within:ring-red-400'
           : isValid
-          ? 'border-emerald-500/50 shadow-sm shadow-emerald-500/10'
-          : 'border-gray-700'
+            ? 'border-emerald-500/50 shadow-sm shadow-emerald-500/10'
+            : 'border-gray-700'
         }`}
       >
-        <div 
+        <div
           aria-hidden="true"
           className={`absolute top-0 bottom-0 left-0 w-16 flex items-center justify-center bg-gray-700/50 border-r border-gray-700 rounded-l-lg transition-colors duration-200 
           ${hasError ? 'bg-red-900/20' : isValid ? 'bg-emerald-900/20' : ''}`}
@@ -133,8 +133,8 @@ const FormField = ({
 
         {isValid && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <motion.div 
-              initial={{ scale: 0, opacity: 0 }} 
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 15 }}
             >
@@ -184,7 +184,7 @@ const FormSection = ({ title, icon: Icon, children, onShareSection }: {
           <Icon className="w-5 h-5 mr-2 text-emerald-400" />
           {title}
         </span>
-        <button 
+        <button
           onClick={(e) => onShareSection(e, title)}
           className="p-2 bg-gray-700/50 hover:bg-emerald-700/50 rounded-full text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105 group"
           title={`Share ${title} section`}
@@ -204,6 +204,17 @@ const FormSection = ({ title, icon: Icon, children, onShareSection }: {
   );
 };
 
+const Input = ({ id, placeholder, className, value, onChange }: { id: string; placeholder: string; className: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
+  <input
+    type="text"
+    id={id}
+    placeholder={placeholder}
+    value={value}
+    onChange={onChange}
+    className={`${className} bg-gray-800/50 border border-gray-700 text-gray-200 p-3 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
+  />
+)
+
 export function OnboardingForm({ formId, sectionId }: Props) {
   const { data: form } = useQuery<FormType>({
     queryKey: ["/api/forms", formId],
@@ -215,7 +226,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   });
 
   const updateFormMutation = useMutation({
-    mutationFn: async (data: BusinessDetails) => {
+    mutationFn: async (data: any) => { // Updated to accept any type of data
       if (sectionId) {
         await apiRequest("PATCH", `/api/sections/${sectionId}/data`, data);
       } else {
@@ -230,7 +241,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     },
   });
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [animatingNav, setAnimatingNav] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
     name: '',
@@ -238,30 +249,49 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     website: '',
     linkedin: '',
     phone: '',
-    location: ''
+    location: '',
+    brandName: "",
+    logo: null,
+    mainColor: "#000000",
+    secondaryColor: "#000000",
+    highlightColor: "#000000"
+
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formProgress, setFormProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Added state for brand assets
+  const [brandAssets, setBrandAssets] = useState({
+    brandName: '',
+    mainColor: '#000000',
+    secondaryColor: '#000000',
+    highlightColor: '#000000'
+  });
+
+  // Added state for file upload
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState('');
+
+
   // Animation variants for consistent animations
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
-      transition: { 
-        type: "spring", 
-        stiffness: 100, 
+      transition: {
+        type: "spring",
+        stiffness: 100,
         damping: 15,
         mass: 1
       }
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       y: -20,
-      transition: { 
+      transition: {
         duration: 0.2,
         ease: "easeOut"
       }
@@ -355,7 +385,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         if (!value) error = 'Please select a business type';
         break;
       case 'website':
-        if (value && !/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value)) 
+        if (value && !/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
           error = 'Please enter a valid URL (e.g., https://example.com)';
         break;
       case 'phone':
@@ -410,41 +440,82 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
   };
 
+  // Add file upload handler
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Add color change handler
+  const handleColorChange = (color: string, type: 'mainColor' | 'secondaryColor' | 'highlightColor') => {
+    setBrandAssets(prev => ({
+      ...prev,
+      [type]: color
+    }));
+  };
+
+  // Update the validation to include brand assets
+  const validateBrandAssets = () => {
+    const errors: Record<string, string> = {};
+
+    if (!brandAssets.brandName) {
+      errors.brandName = 'Brand name is required';
+    }
+
+    return errors;
+  };
+
+  const validateBusinessInfo = () => {
+    const errors: Record<string, string> = {};
+    for (const field of formFields) {
+      const error = validateField(field.name, businessDetails[field.name]);
+      if (error) {
+        errors[field.name] = error;
+      }
+    }
+    return errors;
+  };
+
+
   const handleContinue = async () => {
     if (animatingNav) return;
 
     // Validate all fields before continuing
-    let hasErrors = false;
-    const newErrors: Record<string, string> = {};
-    const newTouched: Record<string, boolean> = {};
+    let errors = {};
 
-    Object.keys(businessDetails).forEach(field => {
-      newTouched[field] = true;
-      const error = validateField(field as keyof BusinessDetails, businessDetails[field as keyof BusinessDetails]);
-      if (error) {
-        hasErrors = true;
-        newErrors[field] = error;
-      }
-    });
+    switch (currentStep) {
+      case 0:
+        errors = validateBrandAssets();
+        break;
+      case 1:
+        errors = validateBusinessInfo();
+        break;
+      // Add other validation cases
+    }
 
-    setTouched(newTouched);
-    setErrors(newErrors);
-
-    if (hasErrors) {
-      // Focus on the first field with an error
-      const firstErrorField = Object.keys(newErrors)[0];
-      const element = document.querySelector(`[name="${firstErrorField}"]`);
-      if (element) {
-        (element as HTMLElement).focus();
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    if (Object.keys(errors).length > 0) {
+      setErrors(errors);
       return;
     }
 
+    // Update form data with brand assets
+    const formData = {
+      ...businessDetails,
+      ...brandAssets,
+      logo: logoFile
+    };
+
     try {
       setIsSubmitting(true);
-      await updateFormMutation.mutateAsync(businessDetails);
-
+      await updateFormMutation.mutateAsync(formData);
       setAnimatingNav(true);
       setCurrentStep(prev => Math.min(prev + 1, defaultSteps.length - 1));
 
@@ -505,7 +576,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   const renderBusinessInfoForm = () => {
     return (
-      <motion.div 
+      <motion.div
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
@@ -519,7 +590,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
             <span className="text-sm font-medium text-emerald-400">{formProgress}%</span>
           </div>
           <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div 
+            <motion.div
               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${formProgress}%` }}
@@ -528,9 +599,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           </div>
         </div>
 
-        <FormSection 
-          title="Business Information" 
-          icon={Building2} 
+        <FormSection
+          title="Business Information"
+          icon={Building2}
           onShareSection={handleShareSection}
         >
           {formFields.slice(0, 2).map((field, index) => (
@@ -547,9 +618,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           ))}
         </FormSection>
 
-        <FormSection 
-          title="Contact Information" 
-          icon={Phone} 
+        <FormSection
+          title="Contact Information"
+          icon={Phone}
           onShareSection={handleShareSection}
         >
           {formFields.slice(2).map((field) => (
@@ -568,13 +639,114 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     );
   };
 
+  const renderBrandAssetsForm = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="w-full space-y-8"
+      >
+        <FormSection
+          title="Brand Assets"
+          icon={Palette}
+          onShareSection={handleShareSection}
+        >
+          <div className="col-span-2">
+            <div className="space-y-2">
+              <label htmlFor="brandName" className="block text-sm font-medium text-gray-300">Brand Name</label>
+              <Input
+                id="brandName"
+                value={brandAssets.brandName}
+                onChange={(e) => setBrandAssets(prev => ({ ...prev, brandName: e.target.value }))}
+                placeholder="Enter your brand name"
+                className={`w-full ${errors.brandName ? 'border-red-500' : ''}`}
+              />
+              {errors.brandName && (
+                <p className="text-red-500 text-sm mt-1">{errors.brandName}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="col-span-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Brand Logo</label>
+              <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 
+                ${logoPreview ? 'border-emerald-500/50' : 'border-gray-700 hover:border-emerald-500/50'}`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="logo-upload"
+                  onChange={handleLogoUpload}
+                />
+                <label
+                  htmlFor="logo-upload"
+                  className="cursor-pointer flex flex-col items-center justify-center"
+                >
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo preview" className="max-h-32 mb-2" />
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-gray-500 mb-2" />
+                      <span className="text-sm text-gray-400">Upload logo file</span>
+                      <span className="text-xs text-gray-500 mt-1">Click or drag and drop</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-span-2">
+            <h3 className="text-sm font-medium text-gray-300 mb-4">Brand Colors</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {['mainColor', 'secondaryColor', 'highlightColor'].map((colorType) => (
+                <div key={colorType}>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    {colorType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={brandAssets[colorType as keyof typeof brandAssets]}
+                      onChange={(e) => handleColorChange(e.target.value, colorType as any)}
+                      className="w-full h-12 rounded-lg cursor-pointer bg-transparent border border-gray-700"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 text-center text-xs text-gray-500 mb-1">
+                      {brandAssets[colorType as keyof typeof brandAssets]}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="col-span-2 mt-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Color Combination Preview</label>
+            <div className="h-16 rounded-lg border border-gray-700 overflow-hidden">
+              <div className="flex h-full">
+                <div className="flex-1" style={{ backgroundColor: brandAssets.mainColor }}></div>
+                <div className="flex-1" style={{ backgroundColor: brandAssets.secondaryColor }}></div>
+                <div className="flex-1" style={{ backgroundColor: brandAssets.highlightColor }}></div>
+              </div>
+            </div>
+          </div>
+        </FormSection>
+      </motion.div>
+    );
+  };
+
   const renderFormContent = () => {
     switch (currentStep) {
+      case 0:
+        return renderBrandAssetsForm();
       case 1:
         return renderBusinessInfoForm();
       default:
         return (
-          <motion.div 
+          <motion.div
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
@@ -635,7 +807,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
             </div>
             <div className="flex space-x-3">
               {currentStep > 0 && (
-                <button 
+                <button
                   onClick={handlePrevious}
                   className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
                   disabled={animatingNav || isSubmitting}
@@ -645,7 +817,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
                   Previous
                 </button>
               )}
-              <button 
+              <button
                 onClick={handleContinue}
                 className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
                   (animatingNav || hasFormErrors() || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''
@@ -674,4 +846,12 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       </div>
     </div>
   );
+}
+
+interface BrandAssets {
+  brandName: string;
+  logo: File | null;
+  mainColor: string;
+  secondaryColor: string;
+  highlightColor: string;
 }
