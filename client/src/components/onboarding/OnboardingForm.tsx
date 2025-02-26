@@ -1204,6 +1204,17 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     { id: 6, title: 'System Integration', icon: Settings }
   ];
 
+  const handleStepClick = (index: number) => {
+    if (getStepStatus(index) !== 'upcoming' && !animatingNav) {
+      setAnimatingNav(true);
+      setCurrentStep(index);
+
+      setTimeout(() => {
+        setAnimatingNav(false);
+      }, 600);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#181c24] flex flex-col md:flex-row">
       {/* Side Navigation */}
