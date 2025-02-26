@@ -22,21 +22,6 @@ interface Props {
   sectionId?: string;
 }
 
-// Format phone number as user types
-const formatPhoneNumber = (value: string) => {
-  // Strip all non-numeric characters
-  const phoneNumber = value.replace(/\D/g, '');
-
-  // Format based on length
-  if (phoneNumber.length <= 3) {
-    return phoneNumber;
-  } else if (phoneNumber.length <= 6) {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-  } else {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
-  }
-};
-
 interface FormField {
   label: string;
   name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize";
@@ -46,6 +31,18 @@ interface FormField {
   options?: { value: string; label: string; }[];
   hint?: string;
 }
+
+// Format phone number as user types
+const formatPhoneNumber = (value: string) => {
+  const phoneNumber = value.replace(/\D/g, '');
+  if (phoneNumber.length <= 3) {
+    return phoneNumber;
+  } else if (phoneNumber.length <= 6) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  } else {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  }
+};
 
 const FormField = ({
   field,
@@ -66,11 +63,6 @@ const FormField = ({
 }) => {
   const { label, name, icon: Icon, placeholder, type = 'text', options = null, hint = null } = field;
   const hasError = touched[name] && errors[name];
-  // A field is only valid if:
-  // 1. It has been touched
-  // 2. Has no errors
-  // 3. Has a value
-  // 4. For text fields, the value is not just whitespace
   const isValid = touched[name] && !errors[name] && value && (type === 'select' ? true : value.trim() !== '');
   const inputId = `field-${name}`;
 
@@ -178,7 +170,7 @@ const FormField = ({
       {name === 'phone' && !hasError && (
         <p id="phone-hint" className="mt-1 text-xs text-gray-500 flex items-center">
           <Info className="w-3 h-3 mr-1 text-gray-500" />
-          Format: +1 (555) 555-5555
+          Format: (555) 555-5555
         </p>
       )}
       {hasError && <p id={`${name}-error`} className="sr-only">{errors[name]}</p>}
@@ -189,7 +181,6 @@ const FormField = ({
 const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, value: string, salesProcess: SalesProcess) => {
   let error = '';
 
-  // Don't validate empty optional fields
   if (!value && ['linkedin', 'website'].includes(name)) {
     return error;
   }
@@ -208,8 +199,8 @@ const validateField = (name: keyof BusinessDetails | "campaignName" | "objective
       break;
     case 'phone':
       if (!value) error = 'Phone number is required';
-      else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
-        error = 'Please enter a valid phone number: +1 (555) 555-5555';
+      else if (!/^\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
+        error = 'Please enter a valid phone number: (555) 555-5555';
       break;
     case 'location':
       if (!value.trim()) error = 'Location is required';
@@ -581,80 +572,6 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   }, [form, section, sectionId]);
 
-  const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, value: string) => {
-    let error = '';
-
-    // Don't validate empty optional fields
-    if (!value && ['linkedin', 'website'].includes(name)) {
-      return error;
-    }
-
-    switch (name) {
-      case 'name':
-        if (!value.trim()) error = 'Business name is required';
-        else if (value.length < 2) error = 'Name must be at least 2 characters';
-        break;
-      case 'type':
-        if (!value) error = 'Please select a business type';
-        break;
-      case 'website':
-        if (value && !/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
-          error = 'Please enter a valid URL starting with http:// or https://';
-        break;
-      case 'phone':
-        if (!value) error = 'Phone number is required';
-        else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
-          error = 'Please enter a valid phone number: +1 (555) 555-5555';
-        break;
-      case 'location':
-        if (!value.trim()) error = 'Location is required';
-        else if (value.length < 3) error = 'Location should be at least 3 characters';
-        break;
-      case 'campaignName':
-        if (!value.trim()) error = 'Campaign name is required';
-        break;
-      case 'objective':
-        if (!value) error = 'Please select a campaign objective';
-        break;
-      case 'jobTitles':
-        if (!value.trim()) error = 'Job titles are required';
-        break;
-      case 'industries':
-        if (!value) error = 'Please select at least one industry';
-        break;
-      case 'companySize':
-        if (!value) error = 'Please select a company size';
-        break;
-      case 'type':
-        if (!value) error = 'Please select a sales process type';
-        break;
-      case 'meetingsCount':
-        if (salesProcess.type === 'calls_proposals' && !value) {
-          error = 'Please select the number of meetings';
-        }
-        break;
-      case 'conversionRate':
-        if (salesProcess.type === 'calls_proposals' && !value) {
-          error = 'Please enter your conversion rate';
-        } else if (value && (Number(value) < 0 || Number(value) > 100)) {
-          error = 'Conversion rate must be between 0 and 100';
-        }
-        break;
-      case 'averageOrderValue':
-        if (!value) error = 'Please enter your average order value';
-        else if (Number(value) <= 0) error = 'Average order value must be greater than 0';
-        break;
-      case 'billingFrequency':
-        if (!value) error = 'Please select a billing frequency';
-        break;
-      case 'salesCycle':
-        if (!value) error = 'Please select your average sales cycle';
-        break;
-    }
-
-    return error;
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -818,7 +735,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setErrors(newErrors);
 
     if (hasErrors) {
-      useToast({ // Using the corrected import
+      useToast({ 
         title: "Please fix the errors",
         description: "Some required fields are missing or invalid",
         variant: "destructive"
@@ -838,14 +755,14 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       };
 
       await updateFormMutation.mutateAsync(formData);
-      useToast({ // Using the corrected import
+      useToast({ 
         title: "Success!",
         description: "Your form has been completed successfully",
         variant: "default"
       });
     } catch (error) {
       console.error('Error saving form:', error);
-      useToast({ // Using the corrected import
+      useToast({ 
         title: "Error",
         description: "Failed to save the form. Please try again.",
         variant: "destructive"
@@ -882,7 +799,7 @@ const renderFormActions = () => {
         </div>
         <button
           onClick={handleComplete}
-          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
+          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale105 ${
             isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
           }`}
           disabled={isSubmitting}
@@ -950,7 +867,7 @@ const renderFormActions = () => {
             <FormField
               key={field.name}
               field={field}
-              value={businessDetails[field.name]}
+              value={businessDetails[field.name] || ''}
               onChange={handleChange}
               onBlur={handleBlur}
               errors={errors}
@@ -1212,7 +1129,7 @@ const renderFormActions = () => {
             <FormField
               key={field.name}
               field={field}
-              value={campaign[field.name]}
+              value={campaign[field.name] || ''}
               onChange={handleCampaignChange}
               onBlur={handleBlur}
               errors={errors}
@@ -1568,7 +1485,7 @@ const renderFormActions = () => {
                   className={`p-3 border rounded-lg text-left transition-all duration-200 ${
                     salesProcess.type === 'website_purchase' 
                       ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' 
-                      : 'bg-gray800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
                   }`}
                   onClick={() => handleSalesProcessChange('type', 'website_purchase')}
                 >
@@ -1646,8 +1563,7 @@ const renderFormActions = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">Average Sales Cycle</label>
+            <div className="space-y-2<label className="block text-sm font-medium text-white">Average Sales Cycle</label>
               <select
                 className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
                 value={salesProcess.salesCycle}
