@@ -56,7 +56,7 @@ const FormField = ({
 }) => {
   const { label, name, icon: Icon, placeholder, type = 'text', options = null, hint = null } = field;
   const hasError = touched[name] && errors[name];
-  const isValid = touched[name] && !errors[name] && value;
+  const isValid = touched[name] && !errors[name] && value && value.trim() !== ''; // Updated validation
   const inputId = `field-${name}`;
 
   return (
@@ -131,7 +131,7 @@ const FormField = ({
           />
         )}
 
-        {isValid && (
+        {isValid && !hasError && ( // Updated condition
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
@@ -434,25 +434,65 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   ];
 
 
-  // Calculate form completion progress
+  // Update the progress calculation
   useEffect(() => {
-    const totalFields = Object.keys(businessDetails).length + Object.keys(brandAssets).length + Object.keys(campaign).length + Object.keys(audience).length;
-    const filledFields = Object.entries({...businessDetails, ...brandAssets, ...campaign, ...audience}).filter(([key, value]) => {
-      if (typeof value === 'string') {
-        return value.trim() !== '';
-      }
-      // Handle non-string values
-      if (key === 'logo') {
-        return value !== null;
-      }
-      // For color values, any value is considered filled since we have defaults
-      if (['mainColor', 'secondaryColor', 'highlightColor'].includes(key)) {
-        return true;
-      }
-      return false;
-    }).length;
-    setFormProgress(Math.round((filledFields / totalFields) * 100));
-  }, [businessDetails, brandAssets, campaign, audience]);
+    const calculateProgress = () => {
+      let validFields = 0;
+      let totalFields = 0;
+
+      // Helper function to check if a field is valid
+      const isFieldValid = (value: any, fieldName: string) => {
+        if (typeof value === 'string') {
+          return value.trim() !== '' && !errors[fieldName];
+        }
+        if (fieldName === 'logo') {
+          return value !== null;
+        }
+        if (['mainColor', 'secondaryColor', 'highlightColor'].includes(fieldName)) {
+          return true; // Colors always have a default value
+        }
+        return false;
+      };
+
+      // Count business details fields
+      Object.entries(businessDetails).forEach(([key, value]) => {
+        totalFields++;
+        if (isFieldValid(value, key)) {
+          validFields++;
+        }
+      });
+
+      // Count brand assets fields
+      Object.entries(brandAssets).forEach(([key, value]) => {
+        totalFields++;
+        if (isFieldValid(value, key)) {
+          validFields++;
+        }
+      });
+
+      // Count campaign fields
+      Object.entries(campaign).forEach(([key, value]) => {
+        if (key !== 'keyMessages' && key !== 'callToAction') { // Optional fields
+          totalFields++;
+          if (isFieldValid(value, key)) {
+            validFields++;
+          }
+        }
+      });
+
+      // Count audience fields
+      Object.entries(audience).forEach(([key, value]) => {
+        totalFields++;
+        if (isFieldValid(value, key)) {
+          validFields++;
+        }
+      });
+
+      return Math.round((validFields / totalFields) * 100);
+    };
+
+    setFormProgress(calculateProgress());
+  }, [businessDetails, brandAssets, campaign, audience, errors]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
