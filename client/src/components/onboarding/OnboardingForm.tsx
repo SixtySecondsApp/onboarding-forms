@@ -821,7 +821,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           {currentStep > 0 && (
             <button
               onClick={() => handleStepNavigation('previous')}
-              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
+              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-allduration-200 flex items-center transform hover:scale-105"
               disabled={animatingNav}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
@@ -1062,26 +1062,102 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       >
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-white mb-2">Target Audience</h2>
-          <p className="text-gray-400">Define your ideal customer profile</p>
+          <p className="text-gray-400">Define who you want to reach with your campaign</p>
         </div>
 
-        <FormSection
-          title="Audience Criteria"
-          icon={Target}
-          onShareSection={handleShareSection}
-        >
-          {audienceFields.map((field) => (
-            <FormField
-              key={field.name}
-              field={field}
-              value={audience[field.name]}
-              onChange={handleAudienceChange}
-              onBlur={handleBlur}
-              errors={errors}
-              touched={touched}
+        <div className="space-y-6">
+          {/* Target Job Titles */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Target Job Titles</label>
+            <textarea
+              placeholder="Enter job titles, one per line (e.g., Marketing Manager, CEO, IT Director)"
+              className="w-full h-32 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
             />
-          ))}
-        </FormSection>
+          </div>
+
+          {/* Target Industries */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Target Industries</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Software & SaaS
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                IT Services & Consulting
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Financial Services
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Professional Services
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Digital Marketing & Advertising
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Business Services
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Manufacturing & Industrial
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Healthcare Technology
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                EdTech & E-Learning
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Cybersecurity
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Cloud Services
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Data Analytics & BI
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Telecommunications
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Legal Services
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Other
+              </button>
+            </div>
+          </div>
+
+          {/* Target Company Sizes */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Target Company Sizes</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Startups
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Small businesses (1-50)
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Medium businesses (51-500)
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                Large enterprises (500+)
+              </button>
+              <button className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors text-left">
+                All company sizes
+              </button>
+            </div>
+          </div>
+
+          {/* Target Locations */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Target Locations</label>
+            <textarea
+              placeholder="Enter target locations (e.g., North America, Europe, Global)"
+              className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+            />
+          </div>
+        </div>
       </motion.div>
     );
   };
@@ -1166,14 +1242,6 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   };
 
   const renderTypographyForm = () => {
-    const fontOptions = [
-      { value: 'inter', label: 'Inter' },
-      { value: 'roboto', label: 'Roboto' },
-      { value: 'poppins', label: 'Poppins' },
-      { value: 'montserrat', label: 'Montserrat' },
-      { value: 'opensans', label: 'Open Sans' }
-    ];
-
     return (
       <motion.div
         variants={fadeInUp}
@@ -1184,39 +1252,55 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       >
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-white mb-2">Typography Settings</h2>
-          <p className="text-gray-400">Choose fonts for your brand</p>
+          <p className="text-gray-400">Set up your brand's typography system.</p>
         </div>
 
-        <FormSection
-          title="Font Selection"
-          icon={Type}
-          onShareSection={handleShareSection}
-        >
-          <div className="col-span-2">
-            <div className="space-y-6">
-              {['Title', 'Subtitle', 'Body'].map((type) => (
-                <div key={type} className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">{type} Font</label>
-                  <select
-                    className="w-full bg-gray-800/50 border border-gray-700 text-gray-200 p-3 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  >
-                    <option value="">Select a font</option>
-                    {fontOptions.map(font => (
-                      <option key={font.value} value={font.value}>{font.label}</option>
-                    ))}
-                  </select>
-                  <div className="mt-2 p-4 bg-gray-800/30 rounded-lg">
-                    <p className={`font-${type.toLowerCase()} text-gray-200`}>
-                      {type === 'Title' && "The quick brown fox jumps over the lazy dog"}
-                      {type === 'Subtitle' && "Pack my box with five dozen liquor jugs"}
-                      {type === 'Body' && "Lorem ipsum dolor sit amet, consectetur adipiscing elit"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="space-y-6">
+          {/* Main Title Font */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Main Title Font</label>
+            <p className="text-sm text-gray-400">Used for headlines and main titles</p>
+            <input
+              type="text"
+              placeholder="Font name (e.g., Helvetica Neue)"
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+            />
+            <button className="w-full mt-2 p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
+              <Upload className="w-4 h-4" />
+              Upload font file (OTF or TTF)
+            </button>
           </div>
-        </FormSection>
+
+          {/* Subtitle Font */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Subtitle Font</label>
+            <p className="text-sm text-gray-400">Used for section headers and subtitles</p>
+            <input
+              type="text"
+              placeholder="Font name (e.g., Roboto)"
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+            />
+            <button className="w-full mt-2 p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
+              <Upload className="w-4 h-4" />
+              Upload font file (OTF or TTF)
+            </button>
+          </div>
+
+          {/* Body Text Font */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-white">Body Text Font</label>
+            <p className="text-sm text-gray-400">Used for paragraphs and general text</p>
+            <input
+              type="text"
+              placeholder="Font name (e.g., Inter)"
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+            />
+            <button className="w-full mt-2 p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
+              <Upload className="w-4 h-4" />
+              Upload font file (OTF or TTF)
+            </button>
+          </div>
+        </div>
       </motion.div>
     );
   };
@@ -1231,65 +1315,111 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         className="w-full space-y-8"
       >
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-white mb-2">System Integration</h2>
-          <p className="text-gray-400">Connect your external tools and services</p>
+          <h2 className="text-xl font-semibold text-white mb-2">System Integration Setup</h2>
+          <p className="text-gray-400">Let's connect your systems to enable seamless integration.</p>
         </div>
 
-        <FormSection
-          title="API Integration"
-          icon={Settings}
-          onShareSection={handleShareSection}
-        >
-          <div className="col-span-2">
-            <div className="space-y-6">
-              <div className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
-                <h3 className="text-lg font-medium text-white mb-2">Webhook Settings</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Webhook URL</label>
-                    <Input
-                      id="webhookUrl"
-                      placeholder="https://api.example.com/webhook"
-                      className="w-full"
-                      value=""
-                      onChange={() => {}}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Secret Key</label>
-                    <div className="relative">
-                      <Input
-                        id="secretKey"
-                        type="password"
-                        placeholder="Enter your webhook secret"
-                        className="w-full pr-24"
-                        value=""
-                        onChange={() => {}}
-                      />
-                      <button className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors">
-                        Generate
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
+          <p className="text-sm text-emerald-400">
+            Don't worry if you don't have all the information right now! If you need help with API keys or
+            aren't sure about any details, our team is here to help guide you through the process. Feel
+            free to skip fields you're unsure about - we can always come back to them later.
+          </p>
+        </div>
 
-              <div className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
-                <h3 className="text-lg font-medium text-white mb-2">Event Settings</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {['User Created', 'Form Submitted', 'Payment Processed', 'Status Updated'].map(event => (
-                      <label key={event} className="flex items-center space-x-3 p-3 border border-gray-700 rounded-lg bg-gray-800/50 cursor-pointer hover:bg-gray-700/50 transition-colors">
-                        <input type="checkbox" className="form-checkbox text-emerald-500 rounded bg-gray-700 border-gray-600" />
-                        <span className="text-sm text-gray-300">{event}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
+        {/* Step 1: CRM System */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-white">Step 1: CRM System</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">CRM System</label>
+              <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
+                <option value="">Select your CRM (or ask us for recommendations)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">CRM Name/Instance</label>
+              <input
+                type="text"
+                placeholder="Your CRM instance name (we can help you find this)"
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">CRM Access</label>
+              <textarea
+                placeholder="Need help finding your API key or credentials? Let us know and we'll guide you through the process."
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
             </div>
           </div>
-        </FormSection>
+        </div>
+
+        {/* Step 2: Calendar System */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-white">Step 2: Calendar System</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Calendar System</label>
+              <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
+                <option value="">Which calendar do you use? (We can help set it up)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Calendar Tool</label>
+              <input
+                type="text"
+                placeholder="Any scheduling tools you use? (e.g., Calendly - we can recommend options)"
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3: Configure Your Sales Process */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-white">Step 3: Configure Your Sales Process</h3>
+          <p className="text-sm text-gray-400">Tell us about your ideal process - we can help refine these steps later.</p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Lead Capture Process</label>
+              <textarea
+                placeholder="What happens when a new lead is captured?"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Status Changes</label>
+              <textarea
+                placeholder="How do you change lead statuses?"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Notifications</label>
+              <textarea
+                placeholder="How does your team get notified?"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Other Features</label>
+              <textarea
+                placeholder="Any additional steps we should be aware of?"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+              />
+            </div>
+          </div>
+        </div>
       </motion.div>
     );
   };
