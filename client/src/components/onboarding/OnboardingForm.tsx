@@ -1021,11 +1021,28 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
           <div className="col-span-2 mt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">Color Combination Preview</label>
-            <div className="h-16 rounded-lg border border-gray-700 overflow-hidden">
-              <div className="flex h-full">
-                <div className="flex-1" style={{ backgroundColor: brandAssets.mainColor }}></div>
-                <div className="flex-1" style={{ backgroundColor: brandAssets.secondaryColor }}></div>
-                <div className="flex-1" style={{ backgroundColor: brandAssets.highlightColor }}></div>
+            <div className="relative w-64 h-64 mx-auto">
+              {/* Outer circle - Brand Color */}
+              <div 
+                className="absolute inset-0 rounded-full"
+                style={{ backgroundColor: brandAssets.mainColor }}
+              />
+              {/* Middle circle - Secondary Color */}
+              <div 
+                className="absolute inset-8 rounded-full"
+                style={{ backgroundColor: brandAssets.secondaryColor }}
+              />
+              {/* Center circle with highlight text */}
+              <div 
+                className="absolute inset-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'white' }}
+              >
+                <span 
+                  className="text-lg font-semibold"
+                  style={{ color: brandAssets.highlightColor }}
+                >
+                  Sample Text
+                </span>
               </div>
             </div>
           </div>
@@ -1149,15 +1166,57 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   };
 
   const renderTypographyForm = () => {
+    const fontOptions = [
+      { value: 'inter', label: 'Inter' },
+      { value: 'roboto', label: 'Roboto' },
+      { value: 'poppins', label: 'Poppins' },
+      { value: 'montserrat', label: 'Montserrat' },
+      { value: 'opensans', label: 'Open Sans' }
+    ];
+
     return (
       <motion.div
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="flex items-center justify-center h-48"
+        className="w-full space-y-8"
       >
-        <p className="text-gray-400">Typography Form</p>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white mb-2">Typography Settings</h2>
+          <p className="text-gray-400">Choose fonts for your brand</p>
+        </div>
+
+        <FormSection
+          title="Font Selection"
+          icon={Type}
+          onShareSection={handleShareSection}
+        >
+          <div className="col-span-2">
+            <div className="space-y-6">
+              {['Title', 'Subtitle', 'Body'].map((type) => (
+                <div key={type} className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">{type} Font</label>
+                  <select
+                    className="w-full bg-gray-800/50 border border-gray-700 text-gray-200 p-3 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  >
+                    <option value="">Select a font</option>
+                    {fontOptions.map(font => (
+                      <option key={font.value} value={font.value}>{font.label}</option>
+                    ))}
+                  </select>
+                  <div className="mt-2 p-4 bg-gray-800/30 rounded-lg">
+                    <p className={`font-${type.toLowerCase()} text-gray-200`}>
+                      {type === 'Title' && "The quick brown fox jumps over the lazy dog"}
+                      {type === 'Subtitle' && "Pack my box with five dozen liquor jugs"}
+                      {type === 'Body' && "Lorem ipsum dolor sit amet, consectetur adipiscing elit"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FormSection>
       </motion.div>
     );
   };
@@ -1169,9 +1228,68 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="flex items-center justify-center h-48"
+        className="w-full space-y-8"
       >
-        <p className="text-gray-400">System Integration Form</p>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white mb-2">System Integration</h2>
+          <p className="text-gray-400">Connect your external tools and services</p>
+        </div>
+
+        <FormSection
+          title="API Integration"
+          icon={Settings}
+          onShareSection={handleShareSection}
+        >
+          <div className="col-span-2">
+            <div className="space-y-6">
+              <div className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
+                <h3 className="text-lg font-medium text-white mb-2">Webhook Settings</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Webhook URL</label>
+                    <Input
+                      id="webhookUrl"
+                      placeholder="https://api.example.com/webhook"
+                      className="w-full"
+                      value=""
+                      onChange={() => {}}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Secret Key</label>
+                    <div className="relative">
+                      <Input
+                        id="secretKey"
+                        type="password"
+                        placeholder="Enter your webhook secret"
+                        className="w-full pr-24"
+                        value=""
+                        onChange={() => {}}
+                      />
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors">
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border border-gray-700 rounded-lg bg-gray-800/30">
+                <h3 className="text-lg font-medium text-white mb-2">Event Settings</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {['User Created', 'Form Submitted', 'Payment Processed', 'Status Updated'].map(event => (
+                      <label key={event} className="flex items-center space-x-3 p-3 border border-gray-700 rounded-lg bg-gray-800/50 cursor-pointer hover:bg-gray-700/50 transition-colors">
+                        <input type="checkbox" className="form-checkbox text-emerald-500 rounded bg-gray-700 border-gray-600" />
+                        <span className="text-sm text-gray-300">{event}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </FormSection>
       </motion.div>
     );
   };
