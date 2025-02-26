@@ -1,26 +1,32 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, DollarSign } from 'lucide-react';
+import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload } from 'lucide-react';
 import { ProgressTracker, type Step } from './ProgressTracker';
 import { ShareSection } from './ShareSection';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-
-interface SalesProcess {
-  type: string;
-  meetingsCount: string;
-  conversionRate: string;
-  averageOrderValue: string;
-  billingFrequency: string;
-  salesCycle: string;
-}
+import { useToast } from "@/hooks/use-toast"; // Updated import path
 
 interface Props {
   formId: string;
   sectionId?: string;
 }
+
+// Format phone number as user types
+const formatPhoneNumber = (value: string) => {
+  // Strip all non-numeric characters
+  const phoneNumber = value.replace(/\D/g, '');
+
+  // Format based on length
+  if (phoneNumber.length <= 3) {
+    return phoneNumber;
+  } else if (phoneNumber.length <= 6) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  } else {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  }
+};
 
 interface FormField {
   label: string;
@@ -31,18 +37,6 @@ interface FormField {
   options?: { value: string; label: string; }[];
   hint?: string;
 }
-
-// Format phone number as user types
-const formatPhoneNumber = (value: string) => {
-  const phoneNumber = value.replace(/\D/g, '');
-  if (phoneNumber.length <= 3) {
-    return phoneNumber;
-  } else if (phoneNumber.length <= 6) {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-  } else {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
-  }
-};
 
 const FormField = ({
   field,
@@ -63,6 +57,11 @@ const FormField = ({
 }) => {
   const { label, name, icon: Icon, placeholder, type = 'text', options = null, hint = null } = field;
   const hasError = touched[name] && errors[name];
+  // A field is only valid if:
+  // 1. It has been touched
+  // 2. Has no errors
+  // 3. Has a value
+  // 4. For text fields, the value is not just whitespace
   const isValid = touched[name] && !errors[name] && value && (type === 'select' ? true : value.trim() !== '');
   const inputId = `field-${name}`;
 
@@ -170,7 +169,7 @@ const FormField = ({
       {name === 'phone' && !hasError && (
         <p id="phone-hint" className="mt-1 text-xs text-gray-500 flex items-center">
           <Info className="w-3 h-3 mr-1 text-gray-500" />
-          Format: (555) 555-5555
+          Format: +1 (555) 555-5555
         </p>
       )}
       {hasError && <p id={`${name}-error`} className="sr-only">{errors[name]}</p>}
@@ -178,9 +177,10 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, value: string, salesProcess: SalesProcess) => {
+const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
 
+  // Don't validate empty optional fields
   if (!value && ['linkedin', 'website'].includes(name)) {
     return error;
   }
@@ -199,8 +199,8 @@ const validateField = (name: keyof BusinessDetails | "campaignName" | "objective
       break;
     case 'phone':
       if (!value) error = 'Phone number is required';
-      else if (!/^\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
-        error = 'Please enter a valid phone number: (555) 555-5555';
+      else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
+        error = 'Please enter a valid phone number: +1 (555) 555-5555';
       break;
     case 'location':
       if (!value.trim()) error = 'Location is required';
@@ -221,36 +221,12 @@ const validateField = (name: keyof BusinessDetails | "campaignName" | "objective
     case 'companySize':
       if (!value) error = 'Please select a company size';
       break;
-    case 'type':
-      if (!value) error = 'Please select a sales process type';
-      break;
-    case 'meetingsCount':
-      if (salesProcess.type === 'calls_proposals' && !value) {
-        error = 'Please select the number of meetings';
-      }
-      break;
-    case 'conversionRate':
-      if (salesProcess.type === 'calls_proposals' && !value) {
-        error = 'Please enter your conversion rate';
-      } else if (value && (Number(value) < 0 || Number(value) > 100)) {
-        error = 'Conversion rate must be between 0 and 100';
-      }
-      break;
-    case 'averageOrderValue':
-      if (!value) error = 'Please enter your average order value';
-      else if (Number(value) <= 0) error = 'Average order value must be greater than 0';
-      break;
-    case 'billingFrequency':
-      if (!value) error = 'Please select a billing frequency';
-      break;
-    case 'salesCycle':
-      if (!value) error = 'Please select your average sales cycle';
-      break;
   }
 
   return error;
 };
 
+// Update the FormSection component
 const FormSection = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-emerald-900/10 hover:border-gray-600/50 transition-all duration-300 backdrop-blur-sm">
@@ -350,16 +326,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [otherIndustry, setOtherIndustry] = useState('');
 
-  const [salesProcess, setSalesProcess] = useState<SalesProcess>({
-    type: '',
-    meetingsCount: '',
-    conversionRate: '',
-    averageOrderValue: '',
-    billingFrequency: '',
-    salesCycle: ''
-  });
 
-
+  // Animation variants for consistent animations
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -382,6 +350,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   };
 
+  // Form fields configuration
   const formFields: FormField[] = [
     {
       label: "Business Name",
@@ -439,6 +408,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   ];
 
+  //New fields from edited code
   const campaignFields = [
     {
       label: "Campaign Name",
@@ -499,8 +469,12 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   ];
 
+
+  // Update the progress calculation
   const calculateProgress = () => {
+    // Helper function to check if a field is valid
     const isFieldValid = (value: any, fieldName: string) => {
+      // Skip optional fields if they're empty
       if (['linkedin', 'website'].includes(fieldName) && (!value || value.trim() === '')) {
         return true;
       }
@@ -520,6 +494,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     let totalRequiredFields = 0;
     let validFields = 0;
 
+    // Required fields from businessDetails
     const requiredBusinessFields = ['name', 'type', 'phone', 'location'];
     requiredBusinessFields.forEach(field => {
       totalRequiredFields++;
@@ -528,6 +503,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       }
     });
 
+    // Optional fields (don't count towards total if empty)
     ['website', 'linkedin'].forEach(field => {
       const value = businessDetails[field as keyof BusinessDetails];
       if (value && value.trim() !== '') {
@@ -538,6 +514,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       }
     });
 
+    // Required fields for the current step
     const currentStepFields = (() => {
       switch (currentStep) {
         case 0: // Business Details
@@ -546,23 +523,22 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           return ['campaignName', 'objective'];
         case 2: // Target Audience
           return ['jobTitles', 'industries', 'companySize'];
-        case 3: // Sales Process
-          return ['type', 'meetingsCount', 'conversionRate', 'averageOrderValue', 'billingFrequency', 'salesCycle'];
-        case 4: // Typography
+        case 3: // Typography
           return ['mainTitleFont', 'subtitleFont', 'bodyTextFont'];
-        case 5: // Brand Assets
+        case 4: // Brand Assets
           return ['brandName', 'mainColor', 'secondaryColor', 'highlightColor'];
         default:
           return [];
       }
     })();
 
+    // Update form progress
     return Math.round((validFields / Math.max(totalRequiredFields, 1)) * 100);
   };
 
   useEffect(() => {
     setFormProgress(calculateProgress());
-  }, [businessDetails, brandAssets, campaign, audience, salesProcess, errors, currentStep]);
+  }, [businessDetails, brandAssets, campaign, audience, errors, currentStep]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
@@ -571,6 +547,57 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       setBusinessDetails(form.data as BusinessDetails);
     }
   }, [form, section, sectionId]);
+
+
+  // Enhanced validation with real-time feedback and more detailed error messages
+  const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
+    let error = '';
+
+    // Don't validate empty optional fields
+    if (!value && ['linkedin', 'website'].includes(name)) {
+      return error;
+    }
+
+    switch (name) {
+      case 'name':
+        if (!value.trim()) error = 'Business name is required';
+        else if (value.length < 2) error = 'Name must be at least 2 characters';
+        break;
+      case 'type':
+        if (!value) error = 'Please select a business type';
+        break;
+      case 'website':
+        if (value && !/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/.test(value))
+          error = 'Please enter a valid URL starting with http:// or https://';
+        break;
+      case 'phone':
+        if (!value) error = 'Phone number is required';
+        else if (!/^\+1\s\(\d{3}\)\s\d{3}-\d{4}$/.test(value))
+          error = 'Please enter a valid phone number: +1 (555) 555-5555';
+        break;
+      case 'location':
+        if (!value.trim()) error = 'Location is required';
+        else if (value.length < 3) error = 'Location should be at least 3 characters';
+        break;
+      case 'campaignName':
+        if (!value.trim()) error = 'Campaign name is required';
+        break;
+      case 'objective':
+        if (!value) error = 'Please select a campaign objective';
+        break;
+      case 'jobTitles':
+        if (!value.trim()) error = 'Job titles are required';
+        break;
+      case 'industries':
+        if (!value) error = 'Please select at least one industry';
+        break;
+      case 'companySize':
+        if (!value) error = 'Please select a company size';
+        break;
+    }
+
+    return error;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -587,8 +614,6 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         setCampaign(prev => ({ ...prev, [name]: value }));
       } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
         setAudience(prev => ({ ...prev, [name]: value }));
-      } else if (name === "type" || name === "meetingsCount" || name === "conversionRate" || name === "averageOrderValue" || name === "billingFrequency" || name === "salesCycle"){
-        setSalesProcess(prev => ({...prev, [name]: value}))
       } else {
         setBusinessDetails(prev => ({
           ...prev,
@@ -598,7 +623,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
 
     // Validate on change
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, name === 'phone' ? formatPhoneNumber(value) : value, salesProcess);
+    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -613,13 +638,14 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
 
     // Validate on blur
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || salesProcess[name as keyof typeof salesProcess] || "", salesProcess);
+    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || "");
     setErrors(prev => ({
       ...prev,
       [name]: error
     }));
   };
 
+  // Add file upload handler
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -633,6 +659,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   };
 
+  // Add color change handler
   const handleColorChange = (color: string, type: 'mainColor' | 'secondaryColor' | 'highlightColor') => {
     setBrandAssets(prev => ({
       ...prev,
@@ -640,6 +667,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
   };
 
+  // Update the validation to include brand assets
   const validateBrandAssets = () => {
     const errors: Record<string, string> = {};
 
@@ -653,7 +681,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const validateBusinessInfo = () => {
     const errors: Record<string, string> = {};
     for (const field of formFields) {
-      const error = validateField(field.name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, businessDetails[field.name as keyof BusinessDetails] || "", salesProcess);
+      const error = validateField(field.name, businessDetails[field.name]);
       if (error) {
         errors[field.name] = error;
       }
@@ -664,17 +692,18 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const handleCampaignChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setCampaign(prev => ({ ...prev, [name]: value }));
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, value, salesProcess);
+    const error = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleAudienceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setAudience(prev => ({ ...prev, [name]: value }));
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize" | keyof SalesProcess, value, salesProcess);
+    const error = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
+  // Update the handleStepNavigation function
   const handleStepNavigation = (direction: 'next' | 'previous') => {
     if (animatingNav) return;
     setAnimatingNav(true);
@@ -689,23 +718,26 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   };
 
   const handleComplete = async () => {
+    // Validate all fields before completing
     let hasErrors = false;
     const newErrors: Record<string, string> = {};
     const newTouched: Record<string, boolean> = {};
 
+    // Validate business details
     Object.keys(businessDetails).forEach(field => {
       newTouched[field] = true;
-      const error = validateField(field as keyof BusinessDetails | keyof SalesProcess | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[field as keyof BusinessDetails] || "", salesProcess);
+      const error = validateField(field as keyof BusinessDetails, businessDetails[field as keyof BusinessDetails]);
       if (error) {
         hasErrors = true;
         newErrors[field] = error;
       }
     });
 
+    // Validate campaign fields
     Object.keys(campaign).forEach(field => {
       if (field !== 'keyMessages' && field !== 'callToAction') { // Optional fields
         newTouched[field] = true;
-        const error = validateField(field as any, campaign[field as keyof typeof campaign], salesProcess);
+        const error = validateField(field as any, campaign[field as keyof typeof campaign]);
         if (error) {
           hasErrors = true;
           newErrors[field] = error;
@@ -713,29 +745,22 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       }
     });
 
+    // Validate audience fields
     Object.keys(audience).forEach(field => {
       newTouched[field] = true;
-      const error = validateField(field as any, audience[field as keyof typeof audience], salesProcess);
+      const error = validateField(field as any, audience[field as keyof typeof audience]);
       if (error) {
         hasErrors = true;
         newErrors[field] = error;
       }
     });
 
-    Object.keys(salesProcess).forEach(field => {
-      newTouched[field] = true;
-      const error = validateField(field as keyof SalesProcess, salesProcess[field as keyof SalesProcess], salesProcess);
-      if (error){
-        hasErrors = true;
-        newErrors[field] = error;
-      }
-    })
-
     setTouched(newTouched);
     setErrors(newErrors);
 
     if (hasErrors) {
-      useToast({ 
+      // Show error toast
+      useToast({ // Using the corrected import
         title: "Please fix the errors",
         description: "Some required fields are missing or invalid",
         variant: "destructive"
@@ -749,20 +774,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         ...businessDetails,
         ...brandAssets,
         ...campaign,
-        ...salesProcess,
         ...audience,
         logo: logoFile
       };
 
       await updateFormMutation.mutateAsync(formData);
-      useToast({ 
+      useToast({ // Using the corrected import
         title: "Success!",
         description: "Your form has been completed successfully",
         variant: "default"
       });
     } catch (error) {
       console.error('Error saving form:', error);
-      useToast({ 
+      useToast({ // Using the corrected import
         title: "Error",
         description: "Failed to save the form. Please try again.",
         variant: "destructive"
@@ -806,7 +830,6 @@ const renderFormActions = () => {
         >
           {isSubmitting ? (
             <>
-              <div className```javascript
               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
               Saving...
             </>
@@ -832,15 +855,16 @@ const renderFormActions = () => {
     return 'upcoming';
   };
 
+  // Update steps with current status
   const steps = [
     { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
     { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
     { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
-    { id: 4, title: 'Sales Process', icon: DollarSign, status: getStepStatus(3) },
-    { id: 5, title: 'Typography', icon: Type, status: getStepStatus(4) },
-    { id: 6, title: 'Brand Assets', icon: Palette, status: getStepStatus(5) },
-    { id: 7, title: 'System Integration', icon: Settings, status: getStepStatus(6) }
+    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
+    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
+    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
   ];
+
 
   const hasFormErrors = () => {
     return Object.values(errors).some(error => error !== '');
@@ -855,6 +879,7 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
+        {/* Keep the header for business info section */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-bold text-white">Business Details</h2>
@@ -868,7 +893,7 @@ const renderFormActions = () => {
             <FormField
               key={field.name}
               field={field}
-              value={businessDetails[field.name] || ''}
+              value={businessDetails[field.name]}
               onChange={handleChange}
               onBlur={handleBlur}
               errors={errors}
@@ -972,14 +997,17 @@ const renderFormActions = () => {
           <div className="col-span-2 mt-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">Color Combination Preview</label>
             <div className="relative w-64 h-64 mx-auto">
+              {/* Outer circle - Brand Color */}
               <div
                 className="absolute inset-0 rounded-full"
                 style={{ backgroundColor: brandAssets.mainColor }}
               />
+              {/* Middle circle - Secondary Color */}
               <div
                 className="absolute inset-8 rounded-full"
                 style={{ backgroundColor: brandAssets.secondaryColor }}
               />
+              {/* Center circle with highlight text */}
               <div
                 className="absolute inset-16 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: 'white' }}
@@ -1017,6 +1045,7 @@ const renderFormActions = () => {
 
         <FormSection>
           <div className="space-y-6">
+            {/* Target Job Titles */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Target Job Titles</label>
               <textarea
@@ -1027,6 +1056,7 @@ const renderFormActions = () => {
               />
             </div>
 
+            {/* Target Industries */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Target Industries</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1061,6 +1091,7 @@ const renderFormActions = () => {
                 ))}
               </div>
 
+              {/* Other Industry Input */}
               {selectedIndustries.includes('Other') && (
                 <div className="mt-3">
                   <input
@@ -1074,6 +1105,7 @@ const renderFormActions = () => {
               )}
             </div>
 
+            {/* Target Company Sizes */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Target Company Sizes</label>
               <select
@@ -1089,6 +1121,7 @@ const renderFormActions = () => {
               </select>
             </div>
 
+            {/* Target Locations */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-white">Target Locations</label>
               <textarea
@@ -1130,7 +1163,7 @@ const renderFormActions = () => {
             <FormField
               key={field.name}
               field={field}
-              value={campaign[field.name] || ''}
+              value={campaign[field.name]}
               onChange={handleCampaignChange}
               onBlur={handleBlur}
               errors={errors}
@@ -1208,6 +1241,7 @@ const renderFormActions = () => {
           <ShareSection formId={1} section="Typography" />
         </div>
         <FormSection>
+          {/* Main Title Font */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-white">Main Title Font</label>
             <p className="text-sm text-gray-400">Used for headlines and main titles</p>
@@ -1222,6 +1256,7 @@ const renderFormActions = () => {
             </button>
           </div>
 
+          {/* Subtitle Font */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-white">Subtitle Font</label>
             <p className="text-sm text-gray-400">Used for section headers and subtitles</p>
@@ -1236,6 +1271,7 @@ const renderFormActions = () => {
             </button>
           </div>
 
+          {/* Body Text Font */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-white">Body Text Font</label>
             <p className="text-sm text-gray-400">Used for paragraphs and general text</p>
@@ -1284,6 +1320,7 @@ const renderFormActions = () => {
             </p>
           </div>
 
+          {/* Step 1: CRM System */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Step 1: CRM System</h3>
 
@@ -1314,6 +1351,7 @@ const renderFormActions = () => {
             </div>
           </div>
 
+          {/* Step 2: Calendar System */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Step 2: Calendar System</h3>
 
@@ -1336,6 +1374,7 @@ const renderFormActions = () => {
             </div>
           </div>
 
+          {/* Step 3: Configure Your Sales Process */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Step 3: Configure Your Sales Process</h3>
             <p className="text-sm text-gray-400">Tell us about your ideal process - we can help refine these steps later.</p>
@@ -1388,26 +1427,23 @@ const renderFormActions = () => {
       case 2:
         return renderTargetAudienceForm();
       case 3:
-        return renderSalesForm();
-      case 4:
         return renderTypographyForm();
-      case 5:
+      case 4:
         return renderBrandAssetsForm();
-      case 6:
+      case 5:
         return renderSystemIntegrationForm();
       default:
         return renderBusinessInfoForm();
     }
   };
 
-  const steps = [
-    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
-    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
-    { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
-    { id: 4, title: 'Sales Process', icon: DollarSign, status: getStepStatus(3) },
-    { id: 5, title: 'Typography', icon: Type, status: getStepStatus(4) },
-    { id: 6, title: 'Brand Assets', icon: Palette, status: getStepStatus(5) },
-    { id: 7, title: 'System Integration', icon: Settings, status: getStepStatus(6) }
+  const defaultSteps = [
+    { id: 1, title: 'Business Details', icon: Building2 },
+    { id: 2, title: 'Campaign', icon: Target },
+    { id: 3, title: 'Target Audience', icon: Target },
+    { id: 4, title: 'Typography', icon: Type },
+    { id: 5, title: 'Brand Assets', icon: Palette },
+    { id: 6, title: 'System Integration', icon: Settings }
   ];
 
   const handleStepClick = (index: number) => {
@@ -1423,16 +1459,20 @@ const renderFormActions = () => {
     if (selectedIndustries.includes(industry)) {
       setSelectedIndustries(prev => {
         if (prev.includes(industry)) {
+          // If industry is already selected, remove it
           return prev.filter(i => i !== industry);
         } else {
+          // If industry is not selected, add it
           return [...prev, industry];
         }
       });
 
+      // Clear other industry input when deselecting "Other"
       if (industry === 'Other' && selectedIndustries.includes('Other')) {
         setOtherIndustry('');
       }
 
+      // Update the audience state with selected industries
       const industries = selectedIndustries.join(', ') + (otherIndustry ? `, ${otherIndustry}` : '');
       setAudience(prev => ({
         ...prev,
@@ -1443,153 +1483,9 @@ const renderFormActions = () => {
     }
   };
 
-  const handleSalesProcessChange = (field: keyof SalesProcess, value: string) => {
-    setSalesProcess(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const renderSalesForm = () => {
-    return (
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        className="w-full space-y-8"
-      >
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Sales Process</h2>
-            <p className="text-gray-400 mt-1">Tell us about your sales workflow</p>
-          </div>
-          <ShareSection formId={1} section="Sales Process" />
-        </div>
-
-        <FormSection>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">Sales Process Type</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button 
-                  className={`p-3 border rounded-lg text-left transition-all duration-200 ${
-                    salesProcess.type === 'calls_proposals' 
-                      ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' 
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => handleSalesProcessChange('type', 'calls_proposals')}
-                >
-                  Sales Calls and Proposals
-                </button>
-                <button 
-                  className={`p-3 border rounded-lg text-left transition-all duration-200 ${
-                    salesProcess.type === 'website_purchase' 
-                      ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' 
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => handleSalesProcessChange('type', 'website_purchase')}
-                >
-                  Website Purchase
-                </button>
-              </div>
-            </div>
-
-            {salesProcess.type === 'calls_proposals' && (
-              <>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-white">Meetings Before Proposal</label>
-                  <select
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-                    value={salesProcess.meetingsCount}
-                    onChange={(e) => handleSalesProcessChange('meetingsCount', e.target.value)}
-                  >
-                    <option value="">Select number of meetings</option>
-                    <option value="1">1 meeting</option>
-                    <option value="2">2 meetings</option>
-                    <option value="3">3 meetings</option>
-                    <option value="4">4+ meetings</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-white">Proposal Conversion Rate</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 pr-12"
-                      placeholder="Enter conversion rate"
-                      value={salesProcess.conversionRate}
-                      onChange={(e) => handleSalesProcessChange('conversionRate', e.target.value)}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">Average Order Value</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 pl-8 text-gray-200"
-                  placeholder="Enter average order value"
-                  value={salesProcess.averageOrderValue}
-                  onChange={(e) => handleSalesProcessChange('averageOrderValue', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">Billing Frequency</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {['OneOff', 'Monthly', 'Quarterly', 'Annual'].map(frequency => (
-                  <button
-                    key={frequency}
-                    className={`p-3 border rounded-lg text-left transition-all duration-200 ${
-                      salesProcess.billingFrequency === frequency.toLowerCase()
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                    }`}
-                    onClick={() => handleSalesProcessChange('billingFrequency', frequency.toLowerCase())}
-                  >
-                    {frequency}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-white">Average Sales Cycle</label>
-              <select
-                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-                value={salesProcess.salesCycle}
-                onChange={(e) => handleSalesProcessChange('salesCycle', e.target.value)}
-              >
-                <option value="">Select average time from lead to close</option>
-                <option value="immediate">Immediate (Same day)</option>
-                <option value="1_week">Less than 1 week</option>
-                <option value="2_weeks">1-2 weeks</option>
-                <option value="1_month">2-4 weeks</option>
-                <option value="2_months">1-2 months</option>
-                <option value="3_months">2-3 months</option>
-                <option value="6_months">3-6 months</option>
-                <option value="more">6+ months</option>
-              </select>
-            </div>
-          </div>
-        </FormSection>
-      </motion.div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-[#181c24] flex flex-col md:flex-row">
+      {/* Side Navigation */}
       <div className="w-full md:w-64 p-6 border-b md:border-r border-gray-800">
         <ProgressTracker
           steps={steps}
@@ -1599,6 +1495,7 @@ const renderFormActions = () => {
         />
       </div>
 
+      {/* Main Content Area */}
       <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="relative">
@@ -1606,12 +1503,13 @@ const renderFormActions = () => {
               {renderFormContent()}
             </AnimatePresence>
           </div>
+
           {renderFormActions()}
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default OnboardingForm;
 
