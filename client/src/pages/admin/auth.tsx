@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase, createTestUser } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 // Basic email validation
 const isValidEmail = (email: string) => {
@@ -18,8 +18,9 @@ export default function AdminAuth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -34,50 +35,34 @@ export default function AdminAuth() {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        setLocation("/admin/dashboard");
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-      setLocation("/admin/dashboard");
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Registration successful! You can now log in.",
+        });
+        setIsLogin(true);
+      }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Auth error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Invalid login credentials",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateTestUser = async () => {
-    setLoading(true);
-    try {
-      // Generate a unique test email address
-      const uniqueId = Math.random().toString(36).substring(2, 8);
-      const testEmail = `test.${uniqueId}@example.com`;
-      const testPassword = "password123";
-
-      await createTestUser(testEmail, testPassword);
-
-      toast({
-        title: "Success",
-        description: `Test user created! Email: ${testEmail}, Password: ${testPassword}`,
-      });
-
-      // Auto-fill the form
-      setEmail(testEmail);
-      setPassword(testPassword);
-    } catch (error: any) {
-      console.error('Create test user error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to create test user. The user might already exist.",
+        description: error.message || "Authentication failed",
       });
     } finally {
       setLoading(false);
@@ -88,10 +73,10 @@ export default function AdminAuth() {
     <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Admin Login</CardTitle>
+          <CardTitle>{isLogin ? "Admin Login" : "Admin Registration"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
                 type="email"
@@ -117,17 +102,16 @@ export default function AdminAuth() {
               className="w-full"
               disabled={loading}
             >
-              {loading ? "Loading..." : "Login"}
+              {loading ? "Loading..." : (isLogin ? "Login" : "Register")}
             </Button>
-            <div className="text-center">
+            <div className="text-center mt-4">
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleCreateTestUser}
-                disabled={loading}
-                className="w-full mt-2"
+                variant="ghost"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm"
               >
-                Create Test Account
+                {isLogin ? "Need an account? Register" : "Already have an account? Login"}
               </Button>
             </div>
           </form>
