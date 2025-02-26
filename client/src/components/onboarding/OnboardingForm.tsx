@@ -241,7 +241,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     },
   });
 
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
   const [animatingNav, setAnimatingNav] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
     name: '',
@@ -751,12 +751,76 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     );
   };
 
+  const renderTargetAudienceForm = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="flex items-center justify-center h-48"
+      >
+        <p className="text-gray-400">Target Audience Form</p>
+      </motion.div>
+    );
+  };
+
+  const renderCampaignForm = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="flex items-center justify-center h-48"
+      >
+        <p className="text-gray-400">Campaign Form</p>
+      </motion.div>
+    );
+  };
+
+  const renderTypographyForm = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="flex items-center justify-center h-48"
+      >
+        <p className="text-gray-400">Typography Form</p>
+      </motion.div>
+    );
+  };
+
+  const renderSystemIntegrationForm = () => {
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="flex items-center justify-center h-48"
+      >
+        <p className="text-gray-400">System Integration Form</p>
+      </motion.div>
+    );
+  };
+
   const renderFormContent = () => {
     switch (currentStep) {
-      case 0:
-        return renderBrandAssetsForm();
       case 1:
         return renderBusinessInfoForm();
+      case 2:
+        return renderBrandAssetsForm();
+      case 3:
+        return renderTargetAudienceForm();
+      case 4:
+        return renderCampaignForm();
+      case 5:
+        return renderTypographyForm();
+      case 6:
+        return renderSystemIntegrationForm();
       default:
         return (
           <motion.div
