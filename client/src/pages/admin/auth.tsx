@@ -59,7 +59,7 @@ export default function AdminAuth() {
     try {
       // Generate a unique test email address
       const uniqueId = Math.random().toString(36).substring(2, 8);
-      const testEmail = `test.${uniqueId}@replit-test.com`;
+      const testEmail = `test.${uniqueId}@example.com`;
       const testPassword = "password123";
 
       await createTestUser(testEmail, testPassword);
