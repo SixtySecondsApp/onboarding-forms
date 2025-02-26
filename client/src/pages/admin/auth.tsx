@@ -26,11 +26,12 @@ export default function AdminAuth() {
       if (error) throw error;
 
       setLocation("/admin/dashboard");
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Invalid login credentials",
+        description: error.message || "Invalid login credentials",
       });
     } finally {
       setLoading(false);
@@ -53,11 +54,12 @@ export default function AdminAuth() {
       // Auto-fill the form
       setEmail(testEmail);
       setPassword(testPassword);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Create test user error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create test user. The user might already exist.",
+        description: error.message || "Failed to create test user. The user might already exist.",
       });
     } finally {
       setLoading(false);
@@ -79,6 +81,7 @@ export default function AdminAuth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -88,6 +91,7 @@ export default function AdminAuth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <Button
