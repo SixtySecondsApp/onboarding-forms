@@ -226,35 +226,11 @@ const validateField = (name: keyof BusinessDetails | "campaignName" | "objective
   return error;
 };
 
-const FormSection = ({ title, icon: Icon, children, onShareSection }: {
-  title: string;
-  icon: any;
-  children: React.ReactNode;
-  onShareSection: (e: React.MouseEvent, title: string) => void;
-}) => {
+// Update the FormSection component
+const FormSection = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-emerald-900/10 hover:border-gray-600/50 transition-all duration-300">
-      <div className="text-lg font-medium text-white mb-5 flex items-center justify-between">
-        <span className="flex items-center">
-          <Icon className="w-5 h-5 mr-2 text-emerald-400" />
-          {title}
-        </span>
-        <button
-          onClick={(e) => onShareSection(e, title)}
-          className="p-2 bg-gray-700/50 hover:bg-emerald-700/50 rounded-full text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105 group"
-          title={`Share ${title} section`}
-          aria-label={`Share ${title} section`}
-        >
-          <Share className="w-4 h-4" />
-          <span className="sr-only">Share {title}</span>
-          <span className="absolute -top-10 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            Share {title}
-          </span>
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {children}
-      </div>
+    <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-emerald-900/10 hover:border-gray-600/50 transition-all duration-300 backdrop-blur-sm">
+      {children}
     </div>
   );
 };
@@ -903,27 +879,16 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        {/* Form progress indicator */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-sm font-medium text-gray-400">Form Progress</span>
-            <span className="text-sm font-medium text-emerald-400">{formProgress}%</span>
+        {/* Keep the header for business info section */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Business Details</h2>
+            <p className="text-gray-400 mt-1">Tell us about your business</p>
           </div>
-          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${formProgress}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
+          <ShareSection formId={1} section="Business Details" />
         </div>
 
-        <FormSection
-          title="Business Information"
-          icon={Building2}
-          onShareSection={handleShareSection}
-        >
+        <FormSection>
           {formFields.map((field) => (
             <FormField
               key={field.name}
@@ -950,11 +915,15 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <FormSection
-          title="Brand Assets"
-          icon={Palette}
-          onShareSection={handleShareSection}
-        >
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Brand Assets</h2>
+            <p className="text-gray-400 mt-1">Define your brand’s look and feel</p>
+          </div>
+          <ShareSection formId={1} section="Brand Assets" />
+        </div>
+
+        <FormSection>
           <div className="col-span-2">
             <div className="space-y-2">
               <label htmlFor="brandName" className="block text-sm font-medium text-gray-300">Brand Name</label>
@@ -1066,6 +1035,14 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Target Audience</h2>
+            <p className="text-gray-400 mt-1">Define who you want to reach with your campaign</p>
+          </div>
+          <ShareSection formId={1} section="Target Audience" />
+        </div>
+
         <FormSection>
           <div className="space-y-6">
             {/* Target Job Titles */}
@@ -1174,11 +1151,14 @@ const renderFormActions = () => {
           <p className="text-gray-400">Define your campaign goals and content</p>
         </div>
 
-        <FormSection
-          title="Campaign Details"
-          icon={Target}
-          onShareSection={handleShareSection}
-        >
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Campaign Details</h2>
+            <p className="text-gray-400 mt-1">Tell us about your campaign</p>
+          </div>
+          <ShareSection formId={1} section="Campaign Details" />
+        </div>
+        <FormSection>
           {campaignFields.map((field) => (
             <FormField
               key={field.name}
@@ -1253,7 +1233,14 @@ const renderFormActions = () => {
           <p className="text-gray-400">Set up your brand's typography system.</p>
         </div>
 
-        <div className="space-y-6">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Typography</h2>
+            <p className="text-gray-400 mt-1">Customize your brand’s typography</p>
+          </div>
+          <ShareSection formId={1} section="Typography" />
+        </div>
+        <FormSection>
           {/* Main Title Font */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-white">Main Title Font</label>
@@ -1298,7 +1285,7 @@ const renderFormActions = () => {
               Upload font file (OTF or TTF)
             </button>
           </div>
-        </div>
+        </FormSection>
       </motion.div>
     );
   };
@@ -1317,107 +1304,116 @@ const renderFormActions = () => {
           <p className="text-gray-400">Let's connect your systems to enable seamless integration.</p>
         </div>
 
-        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
-          <p className="text-sm text-emerald-400">
-            Don't worry if you don't have all the information right now! If you need help with API keys or
-            aren't sure about any details, our team is here to help guide you through the process. Feel
-            free to skip fields you're unsure about - we can always come back to them later.
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">System Integration</h2>
+            <p className="text-gray-400 mt-1">Connect your systems for a streamlined workflow</p>
+          </div>
+          <ShareSection formId={1} section="System Integration" />
         </div>
+        <FormSection>
+          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
+            <p className="text-sm text-emerald-400">
+              Don't worry if you don't have all the information right now! If you need help with API keys or
+              aren't sure about any details, our team is here to help guide you through the process. Feel
+              free to skip fields you're unsure about - we can always come back to them later.
+            </p>
+          </div>
 
-        {/* Step 1: CRM System */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Step 1: CRM System</h3>
-
+          {/* Step 1: CRM System */}
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">CRM System</label>
-              <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
-                <option value="">Select your CRM (or ask us for recommendations)</option>
-              </select>
-            </div>
+            <h3 className="text-lg font-medium text-white">Step 1: CRM System</h3>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">CRM Name/Instance</label>
-              <input
-                type="text"
-                placeholder="Your CRM instance name (we can help you find this)"
-                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
-            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">CRM System</label>
+                <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
+                  <option value="">Select your CRM (or ask us for recommendations)</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">CRM Access</label>
-              <textarea
-                placeholder="Need help finding your API key or credentials? Let us know and we'll guide you through the process."
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">CRM Name/Instance</label>
+                <input
+                  type="text"
+                  placeholder="Your CRM instance name (we can help you find this)"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">CRM Access</label>
+                <textarea
+                  placeholder="Need help finding your API key or credentials? Let us know and we'll guide you through the process."
+                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Step 2: Calendar System */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Step 2: Calendar System</h3>
-
+          {/* Step 2: Calendar System */}
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Calendar System</label>
-              <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
-                <option value="">Which calendar do you use? (We can help set it up)</option>
-              </select>
-            </div>
+            <h3 className="text-lg font-medium text-white">Step 2: Calendar System</h3>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Calendar Tool</label>
-              <input
-                type="text"
-                placeholder="Any scheduling tools you use? (e.g., Calendly - we can recommend options)"
-                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Calendar System</label>
+                <select className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200">
+                  <option value="">Which calendar do you use? (We can help set it up)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Calendar Tool</label>
+                <input
+                  type="text"
+                  placeholder="Any scheduling tools you use? (e.g., Calendly - we can recommend options)"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Step 3: Configure Your Sales Process */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Step 3: Configure Your Sales Process</h3>
-          <p className="text-sm text-gray-400">Tell us about your ideal process - we can help refine these steps later.</p>
-
+          {/* Step 3: Configure Your Sales Process */}
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Lead Capture Process</label>
-              <textarea
-                placeholder="What happens when a new lead is captured?"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
-            </div>
+            <h3 className="text-lg font-medium text-white">Step 3: Configure Your Sales Process</h3>
+            <p className="text-sm text-gray-400">Tell us about your ideal process - we can help refine these steps later.</p>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Status Changes</label>
-              <textarea
-                placeholder="How do you change lead statuses?"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
-            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Lead Capture Process</label>
+                <textarea
+                  placeholder="What happens when a new lead is captured?"
+                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Notifications</label>
-              <textarea
-                placeholder="How does your team get notified?"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Status Changes</label>
+                <textarea
+                  placeholder="How do you change lead statuses?"
+                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Other Features</label>
-              <textarea
-                placeholder="Any additional steps we should be aware of?"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Notifications</label>
+                <textarea
+                  placeholder="How does your team get notified?"
+                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Other Features</label>
+                <textarea
+                  placeholder="Any additional steps we should be aware of?"
+                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </FormSection>
       </motion.div>
     );
   };
@@ -1457,6 +1453,34 @@ const renderFormActions = () => {
     setTimeout(() => {
       setAnimatingNav(false);
     }, 600);
+  };
+
+  const handleIndustrySelect = (industry: string) => {
+    if (selectedIndustries.includes(industry)) {
+      setSelectedIndustries(prev => {
+        if (prev.includes(industry)) {
+          // If industry is already selected, remove it
+          return prev.filter(i => i !== industry);
+        } else {
+          // If industry is not selected, add it
+          return [...prev, industry];
+        }
+      });
+
+      // Clear other industry input when deselecting "Other"
+      if (industry === 'Other' && selectedIndustries.includes('Other')) {
+        setOtherIndustry('');
+      }
+
+      // Update the audience state with selected industries
+      const industries = selectedIndustries.join(', ') + (otherIndustry ? `, ${otherIndustry}` : '');
+      setAudience(prev => ({
+        ...prev,
+        industries
+      }));
+    } else {
+      setSelectedIndustries([...selectedIndustries, industry]);
+    }
   };
 
   return (
