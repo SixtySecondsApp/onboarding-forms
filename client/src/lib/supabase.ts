@@ -48,3 +48,78 @@ export const getFileUrl = (bucket: string, path: string) => {
 
   return data.publicUrl;
 };
+
+// Helper function to get the current user
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return user;
+};
+
+// Helper function to create a new form
+export const createForm = async (formData: any) => {
+  const { data, error } = await supabase
+    .from('forms')
+    .insert(formData)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Helper function to update form data
+export const updateFormData = async (formId: string, data: any) => {
+  const { error } = await supabase
+    .from('forms')
+    .update({ data })
+    .eq('id', formId);
+
+  if (error) throw error;
+};
+
+// Helper function to get form data
+export const getFormData = async (formId: string) => {
+  const { data, error } = await supabase
+    .from('forms')
+    .select('*')
+    .eq('id', formId)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Helper function to create a form section
+export const createFormSection = async (sectionData: any) => {
+  const { data, error } = await supabase
+    .from('form_sections')
+    .insert(sectionData)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Helper function to update section data
+export const updateSectionData = async (sectionId: string, data: any) => {
+  const { error } = await supabase
+    .from('form_sections')
+    .update({ data })
+    .eq('id', sectionId);
+
+  if (error) throw error;
+};
+
+// Helper function to get section data
+export const getSectionData = async (sectionId: string) => {
+  const { data, error } = await supabase
+    .from('form_sections')
+    .select('*')
+    .eq('id', sectionId)
+    .single();
+
+  if (error) throw error;
+  return data;
+};

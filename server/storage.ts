@@ -1,132 +1,178 @@
-import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection } from "@shared/schema";
+import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection, type IStorage } from "./types";
+import { createClient } from '@supabase/supabase-js';
 
-export interface IStorage {
-  // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
-  // Form operations  
-  createForm(form: InsertForm): Promise<OnboardingForm>;
-  getForm(id: number): Promise<OnboardingForm | undefined>;
-  updateFormProgress(id: number, progress: number): Promise<void>;
-  updateFormData(id: number, data: any): Promise<void>;
-  updateLastReminder(id: number): Promise<void>;
-  getForms(): Promise<OnboardingForm[]>;
-  
-  // Section operations
-  createSection(section: InsertSection): Promise<FormSection>;
-  getSection(shareId: string): Promise<FormSection | undefined>;
-  updateSectionData(id: number, data: any): Promise<void>;
-  getSections(formId: number): Promise<FormSection[]>;
-}
-
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private forms: Map<number, OnboardingForm>;
-  private sections: Map<number, FormSection>;
-  private currentId: number;
+export class SupabaseStorage implements IStorage {
+  private supabase;
 
   constructor() {
-    this.users = new Map();
-    this.forms = new Map();
-    this.sections = new Map();
-    this.currentId = 1;
+    console.log('Initializing SupabaseStorage...');
+    console.log('Environment variables:', {
+      SUPABASE_URL: process.env.SUPABASE_URL ? 'present' : 'missing',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'present' : 'missing'
+    });
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables:', {
+        SUPABASE_URL: !!supabaseUrl,
+        SUPABASE_SERVICE_ROLE_KEY: !!supabaseServiceKey
+      });
+      throw new Error('Missing required Supabase environment variables. Please check your .env file.');
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('Supabase client initialized successfully');
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id, createdAt: new Date(), isAdmin: false };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const { data, error } = await this.supabase
+      .from('users')
+      .insert(user)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   // Form operations
-  async createForm(insertForm: InsertForm): Promise<OnboardingForm> {
-    const id = this.currentId++;
-    const form: OnboardingForm = {
-      ...insertForm,
-      id,
-      createdAt: new Date(),
-      progress: 0,
-      status: 'pending',
-      data: {},
-      lastReminder: null
-    };
-    this.forms.set(id, form);
-    return form;
+  async createForm(form: InsertForm): Promise<OnboardingForm> {
+    const { data, error } = await this.supabase
+      .from('forms')
+      .insert({
+        ...form,
+        progress: 0,
+        status: 'pending',
+        data: {},
+        last_reminder: null
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async getForm(id: number): Promise<OnboardingForm | undefined> {
-    return this.forms.get(id);
+    const { data, error } = await this.supabase
+      .from('forms')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async updateFormProgress(id: number, progress: number): Promise<void> {
-    const form = this.forms.get(id);
-    if (form) {
-      this.forms.set(id, { ...form, progress });
-    }
+    const { error } = await this.supabase
+      .from('forms')
+      .update({ progress })
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   async updateFormData(id: number, data: any): Promise<void> {
-    const form = this.forms.get(id);
-    if (form) {
-      this.forms.set(id, { ...form, data });
-    }
+    const { error } = await this.supabase
+      .from('forms')
+      .update({ data })
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   async updateLastReminder(id: number): Promise<void> {
-    const form = this.forms.get(id);
-    if (form) {
-      this.forms.set(id, { ...form, lastReminder: new Date() });
-    }
+    const { error } = await this.supabase
+      .from('forms')
+      .update({ last_reminder: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   async getForms(): Promise<OnboardingForm[]> {
-    return Array.from(this.forms.values());
+    const { data, error } = await this.supabase
+      .from('forms')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
   }
 
   // Section operations
-  async createSection(insertSection: InsertSection): Promise<FormSection> {
-    const id = this.currentId++;
-    const section: FormSection = {
-      ...insertSection,
-      id,
-      updatedAt: new Date(),
-      status: 'pending',
-      data: {}
-    };
-    this.sections.set(id, section);
-    return section;
+  async createSection(section: InsertSection): Promise<FormSection> {
+    const { data, error } = await this.supabase
+      .from('form_sections')
+      .insert({
+        ...section,
+        is_completed: false,
+        data: {}
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async getSection(shareId: string): Promise<FormSection | undefined> {
-    return Array.from(this.sections.values()).find(
-      section => section.shareId === shareId
-    );
+    const { data, error } = await this.supabase
+      .from('form_sections')
+      .select('*')
+      .eq('share_id', shareId)
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   async updateSectionData(id: number, data: any): Promise<void> {
-    const section = this.sections.get(id);
-    if (section) {
-      this.sections.set(id, { ...section, data, updatedAt: new Date() });
-    }
+    const { error } = await this.supabase
+      .from('form_sections')
+      .update({ data })
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   async getSections(formId: number): Promise<FormSection[]> {
-    return Array.from(this.sections.values()).filter(
-      section => section.formId === formId
-    );
+    const { data, error } = await this.supabase
+      .from('form_sections')
+      .select('*')
+      .eq('form_id', formId)
+      .order('order_index', { ascending: true });
+
+    if (error) throw error;
+    return data;
   }
 }
 
-export const storage = new MemStorage();
+// Export the Supabase storage instance
+export const storage = new SupabaseStorage();

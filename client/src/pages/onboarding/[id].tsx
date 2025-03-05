@@ -2,11 +2,13 @@ import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
 import { Card, CardContent } from "@/components/ui/card";
+import { getFormData } from "@/lib/supabase";
 
 export default function OnboardingPage() {
   const { id } = useParams();
   const { data: form, isLoading, error } = useQuery({
-    queryKey: ["/api/forms", id],
+    queryKey: ["form", id],
+    queryFn: () => getFormData(id),
   });
 
   if (isLoading) {

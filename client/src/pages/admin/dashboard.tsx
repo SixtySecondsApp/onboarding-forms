@@ -13,12 +13,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { InsertForm, OnboardingForm } from "@shared/schema";
 
 export default function AdminDashboard() {
@@ -31,16 +31,37 @@ export default function AdminDashboard() {
   });
 
   const { data: forms = [] } = useQuery<OnboardingForm[]>({
-    queryKey: ["/api/forms"],
+    queryKey: ["forms"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('forms')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
   });
 
   const createFormMutation = useMutation({
     mutationFn: async (data: InsertForm) => {
-      const response = await apiRequest("POST", "/api/forms", data);
-      return response.json();
+      const { data: form, error } = await supabase
+        .from('forms')
+        .insert({
+          ...data,
+          progress: 0,
+          status: 'pending',
+          data: {},
+          last_reminder: null
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return form;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
       setIsCreateOpen(false);
       setNewClient({ clientName: "", clientEmail: "" });
 
@@ -63,9 +84,15 @@ export default function AdminDashboard() {
 
   const sendReminderMutation = useMutation({
     mutationFn: async (formId: number) => {
-      await apiRequest("POST", `/api/forms/${formId}/reminder`);
+      const { error } = await supabase
+        .from('forms')
+        .update({ last_reminder: new Date().toISOString() })
+        .eq('id', formId);
+      
+      if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
       toast({
         title: "Success",
         description: "Reminder email sent",
@@ -102,25 +129,32 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+      <div className="max-w-6xl mx-auto relative">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Client Onboarding</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Client Onboarding</h1>
+            <p className="text-gray-400 mt-1">Manage and track your client onboarding progress</p>
+          </div>
           <div className="space-x-4">
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
                   <Plus className="w-4 h-4 mr-2" />
                   New Client
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Client Onboarding</DialogTitle>
+              <DialogContent className="bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl data-[state=open]:bg-gradient-to-br data-[state=open]:from-gray-900/95 data-[state=open]:via-gray-800/95 data-[state=open]:to-gray-900/95">
+                <DialogHeader className="space-y-1">
+                  <DialogTitle className="text-2xl font-bold text-white">Create New Client Onboarding</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Start a new client onboarding process by providing their details below.
+                  </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="clientName">Client Name</Label>
+                    <Label htmlFor="clientName" className="text-gray-300">Client Name</Label>
                     <Input
                       id="clientName"
                       value={newClient.clientName}
@@ -128,10 +162,11 @@ export default function AdminDashboard() {
                         setNewClient({ ...newClient, clientName: e.target.value })
                       }
                       required
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="clientEmail">Client Email</Label>
+                    <Label htmlFor="clientEmail" className="text-gray-300">Client Email</Label>
                     <Input
                       id="clientEmail"
                       type="email"
@@ -140,90 +175,106 @@ export default function AdminDashboard() {
                         setNewClient({ ...newClient, clientEmail: e.target.value })
                       }
                       required
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </div>
-                  <Button type="submit" className="w-full">
-                    Create
+                  <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                    Create Onboarding
                   </Button>
                 </form>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleLogout}>
+            <Button 
+              variant="ghost" 
+              onClick={handleLogout} 
+              className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
+            >
               Logout
             </Button>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Client Progress</CardTitle>
+        <Card className="bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+          <CardHeader className="border-b border-gray-800">
+            <CardTitle className="text-xl font-semibold text-white">Client Progress</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Reminder</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="border-b border-gray-800 hover:bg-transparent">
+                  <TableHead className="text-gray-400">Client</TableHead>
+                  <TableHead className="text-gray-400">Progress</TableHead>
+                  <TableHead className="text-gray-400">Status</TableHead>
+                  <TableHead className="text-gray-400">Last Reminder</TableHead>
+                  <TableHead className="text-right text-gray-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {forms.map((form) => (
-                  <TableRow key={form.id} className="cursor-pointer hover:bg-gray-800/50" onClick={() => openForm(form.id)}>
+                  <TableRow 
+                    key={form.id} 
+                    className="cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50" 
+                    onClick={() => openForm(form.id)}
+                  >
                     <TableCell>
                       <div>
-                        <div className="font-medium">{form.clientName}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-white">{form.clientName}</div>
+                        <div className="text-sm text-gray-400">
                           {form.clientEmail}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Progress value={form.progress} className="w-[100px]" />
-                      <span className="text-sm text-gray-500 ml-2">
-                        {form.progress}%
+                      <div className="flex items-center">
+                        <Progress value={form.progress} className="w-[100px] bg-gray-800" />
+                        <span className="text-sm text-gray-400 ml-2">
+                          {form.progress}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="capitalize text-gray-300">{form.status}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-gray-400">
+                        {form.lastReminder
+                          ? new Date(form.lastReminder).toLocaleDateString()
+                          : "Never"}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize">{form.status}</span>
-                    </TableCell>
-                    <TableCell>
-                      {form.lastReminder
-                        ? new Date(form.lastReminder).toLocaleDateString()
-                        : "Never"}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           copyFormUrl(form.id);
                         }}
+                        className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
                       >
                         <Copy className="w-4 h-4 mr-2" />
                         Copy Link
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           sendReminderMutation.mutate(form.id);
                         }}
+                        className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
                       >
                         <Mail className="w-4 h-4 mr-2" />
                         Send Reminder
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           openForm(form.id);
                         }}
+                        className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Open Form

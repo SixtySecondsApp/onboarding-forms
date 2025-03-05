@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -100,10 +100,14 @@ export default function AdminAuth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{isLogin ? "Admin Login" : "Admin Registration"}</CardTitle>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+      <Card className="w-full max-w-md bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-white">{isLogin ? "Admin Login" : "Admin Registration"}</CardTitle>
+          <CardDescription className="text-gray-400">
+            {isLogin ? "Welcome back! Please sign in to your account." : "Create a new admin account to get started."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -115,6 +119,7 @@ export default function AdminAuth() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
             <div className="space-y-2">
@@ -125,21 +130,29 @@ export default function AdminAuth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
               disabled={loading}
             >
-              {loading ? "Loading..." : (isLogin ? "Login" : "Register")}
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Loading...
+                </div>
+              ) : (
+                isLogin ? "Sign In" : "Create Account"
+              )}
             </Button>
             <div className="text-center mt-4">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm"
+                className="text-sm text-gray-400 hover:text-emerald-400 hover:bg-gray-800/50"
               >
                 {isLogin ? "Need an account? Register" : "Already have an account? Login"}
               </Button>
