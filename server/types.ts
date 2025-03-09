@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection } from "@shared/schema";
+import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection, type FormSubmission, type InsertFormSubmission, type SystemSettings } from "@shared/schema";
 
-export type { User, InsertUser, OnboardingForm, InsertForm, FormSection, InsertSection };
+export type { User, InsertUser, OnboardingForm, InsertForm, FormSection, InsertSection, FormSubmission, InsertFormSubmission, SystemSettings };
 
 export interface IStorage {
   // User operations
@@ -21,4 +21,24 @@ export interface IStorage {
   getSection(shareId: string): Promise<FormSection | undefined>;
   updateSectionData(id: number, data: any): Promise<void>;
   getSections(formId: number): Promise<FormSection[]>;
+  
+  // Webhook operations - updated for system-wide settings
+  getWebhookSettings(): Promise<SystemSettings>;
+  updateWebhookSettings(settings: { 
+    webhookUrl?: string, 
+    webhookEnabled?: boolean, 
+    webhookSecret?: string,
+    notifyOnSectionCompletion?: boolean,
+    notifyOnFormCompletion?: boolean
+  }): Promise<void>;
+  generateWebhookSecret(): Promise<string>;
+  sendWebhookNotification(formId: number, data: any): Promise<boolean>;
+  sendSubmissionWebhookNotification(formId: number, data: any): Promise<boolean>;
+  sendSectionWebhookNotification(formId: number, sectionId: number, sectionData: any, sectionName: string): Promise<boolean>;
+  sendFormCompletionWebhookNotification(formId: number): Promise<boolean>;
+  
+  // Form submission operations
+  createSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
+  getSubmissions(formId: number): Promise<FormSubmission[]>;
+  getAllSubmissions(): Promise<FormSubmission[]>;
 } 

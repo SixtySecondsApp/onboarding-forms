@@ -1,7 +1,10 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, Mail, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { 
+  Plus, Mail, Copy, ExternalLink, Loader2, Check, FileText, 
+  Trash2, Lock, ToggleLeft, ToggleRight, Sun, Moon, AlertTriangle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,23 +16,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, 
+  DialogDescription, DialogFooter 
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/types/supabase";
-
-type Form = Database['public']['Tables']['forms']['Row'];
+import type { Form } from "@/lib/supabase";
+import { generateUniqueSlug } from "@/lib/utils";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<Form | null>(null);
+  const [formPassword, setFormPassword] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [newClient, setNewClient] = useState({
-    clientName: "",
-    clientEmail: "",
+    client_name: "",
+    client_email: "",
   });
 
   const { data: forms = [], isLoading, error } = useQuery<Form[]>({
@@ -41,7 +57,92 @@ export default function AdminDashboard() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Forms loaded:', data);
       return data;
+    }
+  });
+
+  // Mutation for deleting a form
+  const deleteFormMutation = useMutation({
+    mutationFn: async (formId: string) => {
+      const { error } = await supabase
+        .from('forms')
+        .delete()
+        .eq('id', formId);
+      
+      if (error) throw error;
+      return formId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+      toast({
+        title: "Success",
+        description: "Form deleted successfully",
+      });
+      setIsDeleteOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete form",
+      });
+    }
+  });
+
+  // Mutation for toggling form status (enable/disable)
+  const toggleFormStatusMutation = useMutation({
+    mutationFn: async ({ formId, isEnabled }: { formId: string, isEnabled: boolean }) => {
+      const { error } = await supabase
+        .from('forms')
+        .update({ is_disabled: !isEnabled })
+        .eq('id', formId);
+      
+      if (error) throw error;
+      return { formId, isEnabled: !isEnabled };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+      toast({
+        title: "Success",
+        description: "Form status updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update form status",
+      });
+    }
+  });
+
+  // Mutation for setting form password
+  const setFormPasswordMutation = useMutation({
+    mutationFn: async ({ formId, password }: { formId: string, password: string }) => {
+      const { error } = await supabase
+        .from('forms')
+        .update({ password: password })
+        .eq('id', formId);
+      
+      if (error) throw error;
+      return { formId, password };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+      toast({
+        title: "Success",
+        description: "Form password set successfully",
+      });
+      setIsPasswordOpen(false);
+      setFormPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to set form password",
+      });
     }
   });
 
@@ -50,10 +151,10 @@ export default function AdminDashboard() {
     setLocation("/admin");
   };
 
-  // Update URL construction methods to avoid double slashes
-  const getFormUrl = (formId: number) => {
+  // Update URL construction methods to use slugs
+  const getFormUrl = (form: Form) => {
     const baseUrl = window.location.origin.replace(/\/$/, '');
-    return `${baseUrl}/onboarding/${formId}`;
+    return `${baseUrl}/onboarding/${form.slug || form.id}`;
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -65,35 +166,62 @@ export default function AdminDashboard() {
         throw new Error('You must be logged in to create forms');
       }
 
+      // Generate a unique slug for the new client
+      const slug = generateUniqueSlug(newClient.client_name);
+      console.log('Creating form with slug:', slug);
+
+      // Create the form without specifying an ID (let Supabase generate it)
       const { data: form, error } = await supabase
         .from('forms')
         .insert({
-          client_name: newClient.clientName,
-          client_email: newClient.clientEmail,
+          client_name: newClient.client_name,
+          client_email: newClient.client_email,
           progress: 0,
           status: 'pending',
           data: {},
-          created_by: user.id // Add creator ID for RLS
+          created_by: user.id,
+          slug: slug,
+          is_disabled: false,
+          password: null
         })
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error creating form:', error);
+        throw error;
+      }
+
+      if (!form || form.length === 0) {
+        console.error('No form data returned after creation');
+        throw new Error('Failed to create form: No data returned');
+      }
+
+      console.log('Form created successfully:', form[0]);
 
       queryClient.invalidateQueries({ queryKey: ["forms"] });
       setIsCreateOpen(false);
-      setNewClient({ clientName: "", clientEmail: "" });
+      setNewClient({ client_name: "", client_email: "" });
 
       toast({
         title: "Success",
         description: "New client onboarding created",
       });
 
-      const formUrl = getFormUrl(form.id);
+      // Use the first form in the array
+      const formUrl = getFormUrl(form[0]);
+      console.log('Form URL generated:', formUrl);
+      
       navigator.clipboard.writeText(formUrl).then(() => {
         toast({
           title: "Form URL Copied",
           description: "Share this URL with your client to start the onboarding process",
+        });
+      }).catch(clipboardError => {
+        console.error('Error copying to clipboard:', clipboardError);
+        // Still show the URL even if clipboard fails
+        toast({
+          title: "Form URL",
+          description: `Share this URL with your client: ${formUrl}`,
         });
       });
     } catch (error: any) {
@@ -106,7 +234,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const sendReminder = async (formId: number) => {
+  const sendReminder = async (formId: string) => {
     try {
       const { error } = await supabase
         .from('forms')
@@ -130,8 +258,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const copyFormUrl = (formId: number) => {
-    const url = getFormUrl(formId);
+  const copyFormUrl = (form: Form) => {
+    const url = getFormUrl(form);
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "URL Copied",
@@ -140,10 +268,69 @@ export default function AdminDashboard() {
     });
   };
 
-  const openForm = (formId: number) => {
-    const url = getFormUrl(formId);
+  const openForm = (form: Form) => {
+    const url = getFormUrl(form);
     window.open(url, '_blank');
   };
+
+  const handleDeleteForm = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    setSelectedForm(form);
+    setIsDeleteOpen(true);
+  };
+
+  const handleToggleFormStatus = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    toggleFormStatusMutation.mutate({ 
+      formId: form.id, 
+      isEnabled: !form.is_disabled 
+    });
+  };
+
+  const handleSetFormPassword = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    setSelectedForm(form);
+    setIsPasswordOpen(true);
+  };
+
+  const confirmDeleteForm = () => {
+    if (selectedForm) {
+      deleteFormMutation.mutate(selectedForm.id);
+    }
+  };
+
+  const confirmSetPassword = () => {
+    if (selectedForm) {
+      setFormPasswordMutation.mutate({ 
+        formId: selectedForm.id, 
+        password: formPassword 
+      });
+    }
+  };
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+    // Update the theme in the document
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+    // Store the preference in localStorage
+    localStorage.setItem('theme', isDarkMode ? 'light' : 'dark');
+  };
+
+  // Initialize theme from localStorage on component mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark');
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    } else {
+      // Default to dark mode if no preference is stored
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
 
   if (error) {
     return (
@@ -164,7 +351,43 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold text-white">Client Onboarding</h1>
             <p className="text-gray-400 mt-1">Manage and track your client onboarding progress</p>
           </div>
-          <div className="space-x-4">
+          <div className="flex items-center space-x-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleTheme}
+                    className="bg-white/10 hover:bg-white/20 text-white border-0"
+                  >
+                    {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Toggle {isDarkMode ? 'Light' : 'Dark'} Mode</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setLocation("/admin/api-docs")}
+                    className="bg-white/10 hover:bg-white/20 text-white border-0"
+                  >
+                    <FileText className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>API Documentation</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
@@ -184,9 +407,9 @@ export default function AdminDashboard() {
                     <Label htmlFor="clientName" className="text-gray-300">Client Name</Label>
                     <Input
                       id="clientName"
-                      value={newClient.clientName}
+                      value={newClient.client_name}
                       onChange={(e) =>
-                        setNewClient({ ...newClient, clientName: e.target.value })
+                        setNewClient({ ...newClient, client_name: e.target.value })
                       }
                       required
                       className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
@@ -197,9 +420,9 @@ export default function AdminDashboard() {
                     <Input
                       id="clientEmail"
                       type="email"
-                      value={newClient.clientEmail}
+                      value={newClient.client_email}
                       onChange={(e) =>
-                        setNewClient({ ...newClient, clientEmail: e.target.value })
+                        setNewClient({ ...newClient, client_email: e.target.value })
                       }
                       required
                       className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
@@ -211,13 +434,26 @@ export default function AdminDashboard() {
                 </form>
               </DialogContent>
             </Dialog>
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
-            >
-              Logout
-            </Button>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="bg-white/10 hover:bg-white/20 text-white border-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Logout</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -249,12 +485,20 @@ export default function AdminDashboard() {
                   {forms.map((form) => (
                     <TableRow
                       key={form.id}
-                      className="cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50"
-                      onClick={() => openForm(form.id)}
+                      className={`cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50 ${form.is_disabled ? 'opacity-60' : ''}`}
+                      onClick={() => openForm(form)}
                     >
                       <TableCell>
                         <div>
-                          <div className="font-medium text-white">{form.client_name}</div>
+                          <div className="font-medium text-white flex items-center">
+                            {form.client_name}
+                            {form.is_disabled && (
+                              <span className="ml-2 text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">Disabled</span>
+                            )}
+                            {form.password && (
+                              <span className="ml-2 text-xs bg-amber-900/30 text-amber-400 px-2 py-0.5 rounded">Password Protected</span>
+                            )}
+                          </div>
                           <div className="text-sm text-gray-400">
                             {form.client_email}
                           </div>
@@ -262,10 +506,32 @@ export default function AdminDashboard() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          <Progress value={form.progress} className="w-[100px] bg-gray-800" />
-                          <span className="text-sm text-gray-400 ml-2">
+                          <Progress 
+                            value={form.progress} 
+                            className={`w-[100px] bg-gray-800 ${
+                              form.status === 'completed' 
+                                ? 'text-emerald-500' 
+                                : form.progress > 75 
+                                  ? 'text-emerald-400' 
+                                  : form.progress > 50 
+                                    ? 'text-amber-400' 
+                                    : form.progress > 25 
+                                      ? 'text-amber-500' 
+                                      : 'text-gray-500'
+                            }`}
+                          />
+                          <span className={`text-sm ml-2 ${
+                            form.status === 'completed' 
+                              ? 'text-emerald-500 font-medium' 
+                              : 'text-gray-400'
+                          }`}>
                             {form.progress}%
                           </span>
+                          {form.status === 'completed' && (
+                            <span className="ml-2 text-emerald-500">
+                              <Check className="w-4 h-4" />
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -278,43 +544,129 @@ export default function AdminDashboard() {
                             : "Never"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyFormUrl(form.id);
-                          }}
-                          className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy Link
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sendReminder(form.id);
-                          }}
-                          className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
-                        >
-                          <Mail className="w-4 h-4 mr-2" />
-                          Send Reminder
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openForm(form.id);
-                          }}
-                          className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
-                        >
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          Open Form
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyFormUrl(form);
+                                  }}
+                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copy Link</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    sendReminder(form.id);
+                                  }}
+                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Send Reminder</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => handleToggleFormStatus(e, form)}
+                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                >
+                                  {form.is_disabled ? (
+                                    <ToggleLeft className="w-4 h-4 text-red-400" />
+                                  ) : (
+                                    <ToggleRight className="w-4 h-4 text-emerald-400" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{form.is_disabled ? 'Enable Form' : 'Disable Form'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => handleSetFormPassword(e, form)}
+                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                >
+                                  <Lock className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{form.password ? 'Change Password' : 'Set Password'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openForm(form);
+                                  }}
+                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Open Form</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e) => handleDeleteForm(e, form)}
+                                  className="h-8 w-8 bg-white/10 hover:bg-red-900/20 text-white hover:text-red-400 border-0"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete Form</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -324,6 +676,90 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="bg-gray-900/95 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white">Confirm Deletion</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete this form? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center p-4 bg-red-900/20 border border-red-800/50 rounded-lg mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-400 mr-3" />
+            <div>
+              <p className="text-red-400 font-medium">Warning</p>
+              <p className="text-red-300/80 text-sm">
+                Deleting this form will remove all associated data and cannot be recovered.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteOpen(false)}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Form
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Setting Dialog */}
+      <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
+        <DialogContent className="bg-gray-900/95 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white">
+              {selectedForm?.password ? 'Change Form Password' : 'Set Form Password'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {selectedForm?.password 
+                ? 'Update the password required to access this form.'
+                : 'Set a password to restrict access to this form.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="formPassword" className="text-gray-300">Password</Label>
+              <Input
+                id="formPassword"
+                type="password"
+                value={formPassword}
+                onChange={(e) => setFormPassword(e.target.value)}
+                placeholder="Enter a secure password"
+                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+              />
+              <p className="text-sm text-gray-500">
+                Leave blank to remove password protection.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPasswordOpen(false)}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmSetPassword}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Save Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

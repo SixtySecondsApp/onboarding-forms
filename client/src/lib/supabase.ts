@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+import { generateUniqueSlug } from './utils';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -16,15 +17,17 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 export type Form = {
-  id: number;
-  clientName: string;
-  clientEmail: string;
+  id: string;
+  client_name: string;
+  client_email: string;
   progress: number;
   status: 'pending' | 'in_progress' | 'completed';
   data: Record<string, any>;
-  lastReminder: string | null;
+  last_reminder: string | null;
   created_at: string;
   updated_at: string;
+  slug: string;
+  created_by?: string;
 }
 
 export type InsertForm = Omit<Form, 'id' | 'created_at' | 'updated_at'>;
@@ -77,15 +80,21 @@ export const getCurrentUser = async () => {
 export const createForm = async (formData: Partial<InsertForm>) => {
   console.log('Creating form with data:', formData); // Debug log
 
+  // Generate a unique slug from the client name
+  const slug = formData.client_name 
+    ? generateUniqueSlug(formData.client_name)
+    : generateUniqueSlug('client');
+
   const { data, error } = await supabase
     .from('forms')
     .insert({
-      clientName: formData.clientName,
-      clientEmail: formData.clientEmail,
+      client_name: formData.client_name,
+      client_email: formData.client_email,
       progress: 0,
       status: 'pending',
       data: {},
-      lastReminder: null
+      last_reminder: null,
+      slug
     })
     .select()
     .single();
@@ -110,7 +119,7 @@ export const getForms = async () => {
 };
 
 // Helper function to update form
-export const updateForm = async (id: number, formData: Partial<Form>) => {
+export const updateForm = async (id: string, formData: Partial<Form>) => {
   const { data, error } = await supabase
     .from('forms')
     .update(formData)
@@ -135,14 +144,32 @@ export const updateFormData = async (formId: string, data: any) => {
 
 // Helper function to get form data
 export const getFormData = async (formId: string) => {
-  const { data, error } = await supabase
-    .from('forms')
-    .select('*')
-    .eq('id', formId)
-    .single();
+  try {
+    console.log("getFormData called with ID:", formId);
+    
+    // First, try to get the form without using .single()
+    const { data, error } = await supabase
+      .from('forms')
+      .select('*')
+      .eq('id', formId);
 
-  if (error) throw error;
-  return data;
+    if (error) {
+      console.error("Error fetching form data:", error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error("No form found with ID:", formId);
+      throw new Error("Form not found");
+    }
+
+    // If multiple rows are returned, use the first one
+    console.log("Form data found:", data[0]);
+    return data[0];
+  } catch (error) {
+    console.error("Error in getFormData:", error);
+    throw error;
+  }
 };
 
 // Helper function to create a form section
@@ -169,12 +196,59 @@ export const updateSectionData = async (sectionId: string, data: any) => {
 
 // Helper function to get section data
 export const getSectionData = async (sectionId: string) => {
-  const { data, error } = await supabase
-    .from('form_sections')
-    .select('*')
-    .eq('id', sectionId)
-    .single();
+  try {
+    console.log("Fetching section data for ID:", sectionId);
+    
+    // First, try to get the section without using .single()
+    const { data, error } = await supabase
+      .from('form_sections')
+      .select('*')
+      .eq('id', sectionId);
 
-  if (error) throw error;
-  return data;
+    if (error) {
+      console.error("Error fetching section data:", error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error("No section found with ID:", sectionId);
+      throw new Error("Section not found");
+    }
+
+    // If multiple rows are returned, use the first one
+    console.log("Section data found:", data[0]);
+    return data[0];
+  } catch (error) {
+    console.error("Error in getSectionData:", error);
+    throw error;
+  }
+};
+
+// Helper function to get form by slug
+export const getFormBySlug = async (slug: string) => {
+  try {
+    console.log("getFormBySlug called with slug:", slug);
+    
+    const { data, error } = await supabase
+      .from('forms')
+      .select('*')
+      .eq('slug', slug);
+
+    if (error) {
+      console.error("Error fetching form data by slug:", error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error("No form found with slug:", slug);
+      throw new Error("Form not found");
+    }
+
+    // If multiple rows are returned, use the first one
+    console.log("Form data found by slug:", data[0]);
+    return data[0];
+  } catch (error) {
+    console.error("Error in getFormBySlug:", error);
+    throw error;
+  }
 };

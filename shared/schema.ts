@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -32,6 +32,27 @@ export const formSections = pgTable("form_sections", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const formSubmissions = pgTable("form_submissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  formId: uuid("form_id").references(() => onboardingForms.id),
+  sectionId: uuid("section_id").references(() => formSections.id),
+  clientIp: text("client_ip"),
+  userAgent: text("user_agent"),
+  submissionData: jsonb("submission_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  webhookUrl: text("webhook_url"),
+  webhookEnabled: boolean("webhook_enabled").default(false),
+  webhookSecret: text("webhook_secret"),
+  notifyOnSectionCompletion: boolean("notify_on_section_completion").default(false),
+  notifyOnFormCompletion: boolean("notify_on_form_completion").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true
@@ -50,6 +71,17 @@ export const insertSectionSchema = createInsertSchema(formSections).omit({
   updatedAt: true
 });
 
+export const insertFormSubmissionSchema = createInsertSchema(formSubmissions).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -58,6 +90,12 @@ export type InsertForm = z.infer<typeof insertFormSchema>;
 
 export type FormSection = typeof formSections.$inferSelect;
 export type InsertSection = z.infer<typeof insertSectionSchema>;
+
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
+
+export type SystemSettings = typeof systemSettings.$inferSelect;
+export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
 
 // Form validation schemas
 export const businessDetailsSchema = z.object({
@@ -118,3 +156,14 @@ export type Campaign = z.infer<typeof campaignSchema>;
 export type Typography = z.infer<typeof typographySchema>;
 export type BrandAssets = z.infer<typeof brandAssetsSchema>;
 export type SystemIntegration = z.infer<typeof systemIntegrationSchema>;
+
+// Webhook settings validation schema
+export const webhookSettingsSchema = z.object({
+  webhookUrl: z.string().url("Please enter a valid URL").optional().or(z.literal('')),
+  webhookEnabled: z.boolean().default(false),
+  webhookSecret: z.string().optional().or(z.literal('')),
+  notifyOnSectionCompletion: z.boolean().default(false),
+  notifyOnFormCompletion: z.boolean().default(true),
+});
+
+export type WebhookSettings = z.infer<typeof webhookSettingsSchema>;

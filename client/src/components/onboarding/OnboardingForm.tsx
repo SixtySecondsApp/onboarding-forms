@@ -1,17 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, Calendar } from 'lucide-react';
+import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, Calendar, Users, UserPlus, MessageSquare, FileImport, Plus, FormInput } from 'lucide-react';
 import { ProgressTracker, type Step } from './ProgressTracker';
+import { WelcomeScreen } from './WelcomeScreen';
+import { CompletionScreen } from './CompletionScreen';
 import { type BusinessDetails, type OnboardingForm as FormType } from '@shared/schema';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getFormData, updateFormData, getSectionData, updateSectionData } from '@/lib/supabase';
 import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
 
 // ShareSection Component
 interface ShareSectionProps {
-  formId: number;
+  formId: string;
   section: string;
 }
 
@@ -20,28 +23,55 @@ const ShareSection = ({ formId, section }: ShareSectionProps) => {
 
   const handleShare = async () => {
     try {
+      console.log("Sharing section:", section, "for form ID:", formId);
+      
+      // Check if the form exists and get its slug
       const { data, error } = await supabase
-        .from('form_sections')
-        .insert({
-          form_id: formId,
-          section,
-          share_id: Math.random().toString(36).substring(7),
-        })
-        .select()
-        .single();
+        .from('forms')
+        .select('id, slug')
+        .eq('id', formId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking form:", error);
+        throw error;
+      }
       
-      toast({
-        title: "Section shared!",
-        description: "A shareable link has been created.",
-        variant: "default",
+      if (!data || data.length === 0) {
+        console.error("Form not found:", formId);
+        throw new Error("Form not found. Please make sure the form exists before sharing.");
+      }
+      
+      // Generate a shareable link with a hashtag for the specific section
+      const baseUrl = window.location.origin;
+      // Convert section name to a URL-friendly format
+      const sectionSlug = section.toLowerCase().replace(/\s+/g, '-');
+      // Use the form slug if available, otherwise use the ID
+      const formIdentifier = data[0].slug || data[0].id;
+      const shareableLink = `${baseUrl}/onboarding/${formIdentifier}#${sectionSlug}`;
+      
+      console.log("Shareable link generated:", shareableLink);
+      
+      // Copy the link to clipboard
+      navigator.clipboard.writeText(shareableLink).then(() => {
+        toast({
+          title: "Link copied!",
+          description: "Shareable link copied to clipboard.",
+          variant: "default",
+        });
+      }).catch((clipboardError) => {
+        console.error("Error copying to clipboard:", clipboardError);
+        // If clipboard API fails, still show the link
+        toast({
+          title: "Section shared!",
+          description: `Share this link: ${shareableLink}`,
+          variant: "default",
+        });
       });
     } catch (error) {
       console.error('Error sharing section:', error);
       toast({
         title: "Error",
-        description: "Failed to share section. Please try again.",
+        description: `Failed to share section: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -49,7 +79,11 @@ const ShareSection = ({ formId, section }: ShareSectionProps) => {
 
   return (
     <button
-      onClick={handleShare}
+      onClick={(e) => {
+        e.preventDefault(); // Prevent form submission
+        handleShare();
+      }}
+      type="button" // Explicitly set button type to prevent form submission
       className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-emerald-400 transition-colors"
     >
       <Share className="w-4 h-4" />
@@ -229,13 +263,8 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
+const validateField = (name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
-
-  // Don't validate empty optional fields
-  if (!value && ['linkedin', 'website', 'keyMessages', 'callToAction', 'locations'].includes(name)) {
-    return error;
-  }
 
   switch (name) {
     case 'name':
@@ -261,6 +290,10 @@ const validateField = (name: keyof BusinessDetails | "campaignName" | "objective
     case 'campaignName':
       if (!value || !value.trim()) error = 'Campaign name is required';
       else if (value.trim().length < 2) error = 'Campaign name must be at least 2 characters';
+      break;
+    case 'successCriteria':
+      if (!value || !value.trim()) error = 'Please describe what success looks like for this campaign';
+      else if (value.trim().length < 5) error = 'Please provide a more detailed description';
       break;
     case 'objective':
       if (!value) error = 'Please select a campaign objective';
@@ -300,28 +333,44 @@ const Input = ({ id, type = "text", placeholder, className, value, onChange }: {
 )
 
 // Add these constants outside of any component
-const SYSTEM_INTEGRATION_OPTIONS = {
-  crm: [
-    { value: 'salesforce', label: 'Salesforce', icon: '⭐️' },
-    { value: 'hubspot', label: 'HubSpot', icon: '🟠' },
-    { value: 'zoho', label: 'Zoho CRM', icon: '🔵' },
-    { value: 'pipedrive', label: 'Pipedrive', icon: '🟢' },
-    { value: 'freshsales', label: 'Freshsales', icon: '🌟' },
-    { value: 'other', label: 'Other CRM', icon: '➕' }
-  ],
-  calendar: [
-    { value: 'google', label: 'Google Calendar', icon: '📅' },
-    { value: 'outlook', label: 'Outlook Calendar', icon: '📆' },
-    { value: 'apple', label: 'Apple Calendar', icon: '🗓️' },
-    { value: 'other', label: 'Other Calendar', icon: '➕' }
-  ],
-  scheduling: [
-    { value: 'calendly', label: 'Calendly', icon: '🎯' },
-    { value: 'youcanbook.me', label: 'YouCanBook.me', icon: '📚' },
-    { value: 'hubspot', label: 'HubSpot Meetings', icon: '🟠' },
-    { value: 'other', label: 'Other Tool', icon: '➕' }
-  ]
-};
+const SYSTEM_INTEGRATION_OPTIONS = [
+  {
+    id: "salesforce",
+    name: "Salesforce",
+    description: "Connect your Salesforce CRM",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg",
+  },
+  {
+    id: "pipedrive",
+    name: "Pipedrive",
+    description: "Connect your Pipedrive CRM",
+    logo: "https://seeklogo.com/images/P/pipedrive-logo-5B941D1045-seeklogo.com.png",
+  },
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    description: "Connect your HubSpot CRM",
+    logo: "https://www.hubspot.com/hubfs/assets/hubspot.com/style-guide/brand-guidelines/guidelines_the-logo.svg",
+  },
+  {
+    id: "savvycal",
+    name: "SavvyCal",
+    description: "Connect your SavvyCal calendar",
+    logo: "https://assets-global.website-files.com/61c0a8113e6c0db0dcecbae0/61c0a8113e6c0d5f6cecbaf2_savvycal-logo.svg",
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    description: "Connect your Slack workspace",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/2048px-Slack_icon_2019.svg.png",
+  },
+  {
+    id: "teams",
+    name: "Microsoft Teams",
+    description: "Connect your Microsoft Teams",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Microsoft_Office_Teams_%282018%E2%80%93present%29.svg/2203px-Microsoft_Office_Teams_%282018%E2%80%93present%29.svg.png",
+  },
+];
 
 // Update the ProgressPie component to use emerald color
 const ProgressPie = ({ progress }: { progress: number }) => {
@@ -398,6 +447,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [animatingNav, setAnimatingNav] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [businessDetails, setBusinessDetails] = useState<BusinessDetails>({
     name: '',
     type: '',
@@ -431,7 +482,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Add new state for campaign and audience data
   const [campaign, setCampaign] = useState({
-    campaignName: '',
+    successCriteria: '',
     objective: '',
     keyMessages: '',
     callToAction: ''
@@ -585,24 +636,27 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   //New fields from edited code
   const campaignFields = [
     {
-      label: "Campaign Name",
-      name: "campaignName",
+      label: "What would make this campaign successful for you?",
+      name: "successCriteria",
       icon: Target,
-      placeholder: "What is your campaign called?",
-      type: "text"
+      placeholder: "Describe what success looks like for this campaign",
+      hint: "E.g., 'Generate 50 qualified leads' or 'Increase brand awareness by 30%'"
     },
     {
       label: "Campaign Objective",
       name: "objective",
       icon: Target,
-      placeholder: "Select an objective",
+      placeholder: "Select campaign objective",
       type: "select",
       options: [
         { value: 'awareness', label: 'Brand Awareness' },
         { value: 'leads', label: 'Lead Generation' },
-        { value: 'sales', label: 'Sales' },
-        { value: 'engagement', label: 'Engagement' }
-      ]
+        { value: 'sales', label: 'Drive Sales' },
+        { value: 'engagement', label: 'Increase Engagement' },
+        { value: 'retention', label: 'Customer Retention' },
+        { value: 'loyalty', label: 'Build Brand Loyalty' }
+      ],
+      hint: "What do you want to achieve with this campaign?"
     }
   ];
 
@@ -649,7 +703,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         case 0: // Business Details
         return ['name', 'type', 'phone', 'location'];
         case 1: // Campaign
-          return ['campaignName', 'objective'];
+          return ['successCriteria', 'objective'];
         case 2: // Target Audience
           return ['jobTitles', 'industries', 'companySize'];
         case 3: // Typography
@@ -663,27 +717,32 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Update the progress calculation and update functions
   const calculateProgress = () => {
-    // Count total fields and completed fields
-    const totalFields = getRequiredFields().length;
-    let completedFields = 0;
-
-    // Check each required field based on current step
-    getRequiredFields().forEach(field => {
-      if (field in businessDetails && businessDetails[field] && !errors[field]) {
-        completedFields++;
+    // Calculate progress based on completed steps and current step
+    if (steps.length === 0) return 0;
+    
+    // Base progress from completed steps
+    const completedProgress = (completedSteps.length / steps.length) * 100;
+    
+    // Add partial progress for current step if it's not already completed
+    if (!completedSteps.includes(currentStep)) {
+      // Calculate how far along the user is in the current step
+      // This gives a sense of progress even within a step
+      const stepProgress = (1 / steps.length) * 50; // 50% of a step's worth
+      
+      // If we're on the last step, make it feel closer to completion
+      if (currentStep === steps.length - 1) {
+        return Math.min(Math.round(completedProgress + stepProgress + 25), 99); // Cap at 99% until actually complete
       }
-      if (field in campaign && campaign[field] && !errors[field]) {
-        completedFields++;
-      }
-      if (field in audience && audience[field] && !errors[field]) {
-        completedFields++;
-      }
-      if (field in typography && typography[field] && !errors[field]) {
-        completedFields++;
-      }
-    });
-
-    return Math.round((completedFields / totalFields) * 100);
+      
+      return Math.round(completedProgress + stepProgress);
+    }
+    
+    // If all steps are completed, return 100%
+    if (completedSteps.length === steps.length) {
+      return 100;
+    }
+    
+    return Math.round(completedProgress);
   };
 
   // Add an effect to update progress when form data changes
@@ -708,14 +767,57 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     updateProgress();
   }, [businessDetails, campaign, audience, typography, errors]);
 
+  // Load business details from form data
   useEffect(() => {
     if (sectionId && section?.data) {
-      setBusinessDetails(section.data as BusinessDetails);
-    } else if (form?.data) {
-      setBusinessDetails(form.data as BusinessDetails);
+      setBusinessDetails(section.data.businessDetails || {});
+    } else if (form?.data?.businessDetails) {
+      setBusinessDetails(form.data.businessDetails);
     }
   }, [form, section, sectionId]);
 
+  // Load campaign data from form data
+  useEffect(() => {
+    if (sectionId && section?.data?.campaign) {
+      setCampaign(section.data.campaign);
+    } else if (form?.data?.campaign) {
+      setCampaign(form.data.campaign);
+    }
+  }, [form, section, sectionId]);
+
+  // Load audience data from form data
+  useEffect(() => {
+    if (sectionId && section?.data?.audience) {
+      setAudience(section.data.audience);
+    } else if (form?.data?.audience) {
+      setAudience(form.data.audience);
+    }
+  }, [form, section, sectionId]);
+
+  // Load typography data from form data
+  useEffect(() => {
+    if (sectionId && section?.data?.typography) {
+      setTypography(section.data.typography);
+    } else if (form?.data?.typography) {
+      setTypography(form.data.typography);
+    }
+  }, [form, section, sectionId]);
+
+  // Load brand assets data from form data
+  useEffect(() => {
+    if (sectionId && section?.data?.brandAssets) {
+      setBrandAssets(section.data.brandAssets);
+    } else if (form?.data?.brandAssets) {
+      setBrandAssets(form.data.brandAssets);
+    }
+  }, [form, section, sectionId]);
+
+  // Load completed steps from form data when component mounts
+  useEffect(() => {
+    if (form?.data?.completedSteps) {
+      setCompletedSteps(form.data.completedSteps);
+    }
+  }, [form]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -728,7 +830,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         [name]: formattedValue
       }));
     } else {
-      if (name === "campaignName" || name === "objective" || name === "keyMessages" || name === "callToAction") {
+      if (name === "successCriteria" || name === "objective" || name === "keyMessages" || name === "callToAction") {
         setCampaign(prev => ({ ...prev, [name]: value }));
       } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
         setAudience(prev => ({ ...prev, [name]: value }));
@@ -741,7 +843,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
 
     // Validate on change and set touched
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
+    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -760,7 +862,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }));
 
     // Validate on blur
-    const error = validateField(name as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || "");
+    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", businessDetails[name as keyof BusinessDetails] || campaign[name as keyof typeof campaign] || audience[name as keyof typeof audience] || "");
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -815,9 +917,11 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     const { name, value } = e.target;
     setCampaign(prev => ({ ...prev, [name]: value }));
     
-    // Mark field as touched and validate immediately
+    // Set touched for this field
     setTouched(prev => ({ ...prev, [name]: true }));
-    const error = validateField(name as "campaignName" | "objective", value);
+    
+    // Validate the field
+    const error = validateField(name as "successCriteria" | "objective", value);
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
@@ -904,37 +1008,81 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     if (animatingNav) return;
     setAnimatingNav(true);
 
-    // Calculate and save progress before moving to next step
+    // Save current form data without changing completion status
+    try {
+      await supabase
+        .from('forms')
+        .update({ 
+          data: {
+            ...form?.data,
+            businessDetails,
+            campaign,
+            audience,
+            typography,
+            completedSteps // Keep the existing completed steps
+          }
+        })
+        .eq('id', formId);
+
+      // Invalidate the forms query to update the dashboard
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+    } catch (error) {
+      console.error('Error saving form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save form data",
+        variant: "destructive"
+      });
+    }
+
     if (direction === 'next') {
-      const newProgress = calculateProgress();
-      try {
+      // Check if all sections are completed after adding the current step
+      const updatedCompletedSteps = completedSteps.includes(currentStep) 
+        ? completedSteps 
+        : [...completedSteps, currentStep];
+      
+      // If all steps are completed, show completion screen
+      if (updatedCompletedSteps.length >= steps.length) {
+        // Update form status to completed
         await supabase
           .from('forms')
           .update({ 
-            progress: newProgress,
-            data: {
-              ...form?.data,
-              businessDetails,
-              campaign,
-              audience,
-              typography
-            }
+            status: 'completed',
+            progress: 100
           })
           .eq('id', formId);
-
-        // Invalidate the forms query to update the dashboard
-        queryClient.invalidateQueries({ queryKey: ["forms"] });
-      } catch (error) {
-        console.error('Error updating progress:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save progress",
-          variant: "destructive"
-        });
+        
+        // Show completion screen with confetti
+        setIsCompleted(true);
+        setAnimatingNav(false);
+        return;
       }
-
-      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+      
+      // Find the next uncompleted step
+      let nextStep = currentStep + 1;
+      while (nextStep < steps.length && updatedCompletedSteps.includes(nextStep)) {
+        nextStep++;
+      }
+      
+      // If we've gone through all steps, show completion screen
+      if (nextStep >= steps.length) {
+        // Update form status to completed
+        await supabase
+          .from('forms')
+          .update({ 
+            status: 'completed',
+            progress: 100
+          })
+          .eq('id', formId);
+        
+        // Show completion screen with confetti
+        setIsCompleted(true);
+      } else {
+        // Otherwise, go to the next uncompleted step
+        setCurrentStep(nextStep);
+      }
     } else {
+      // For previous navigation, just go to the previous step
       setCurrentStep(prev => Math.max(prev - 1, 0));
     }
 
@@ -966,7 +1114,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     requiredFields.forEach(field => {
       newTouched[field] = true;
       const value = currentData[field as keyof typeof currentData] || '';
-      const error = validateField(field as keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize", value);
+      const error = validateField(field as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value);
       if (error) {
         hasErrors = true;
         newErrors[field] = error;
@@ -1002,13 +1150,58 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
       await updateFormMutation.mutateAsync(formData);
 
-      // If this is the final section, show completion message
-      if (currentStep === steps.length - 1) {
-        toast({
-        title: "Success!",
-        description: "Your form has been completed successfully",
-        variant: "default"
+      // Mark the current step as completed
+      setCompletedSteps(prev => {
+        if (!prev.includes(currentStep)) {
+          return [...prev, currentStep];
+        }
+        return prev;
       });
+
+      // Calculate the actual progress based on completed steps
+      const newProgress = Math.round((completedSteps.length + 1) / steps.length * 100);
+
+      // Update form progress in Supabase
+      await supabase
+        .from('forms')
+        .update({ 
+          progress: newProgress,
+          data: {
+            ...form?.data,
+            businessDetails,
+            campaign,
+            audience,
+            typography,
+            completedSteps: [...completedSteps, currentStep]
+          }
+        })
+        .eq('id', formId);
+
+      // Invalidate the forms query to update the dashboard
+      queryClient.invalidateQueries({ queryKey: ["forms"] });
+
+      // Add the current step to completed steps if not already included
+      const updatedCompletedSteps = completedSteps.includes(currentStep)
+        ? completedSteps
+        : [...completedSteps, currentStep];
+
+      // Check if all sections are now completed
+      const allSectionsCompleted = updatedCompletedSteps.length >= steps.length || 
+                                  currentStep === steps.length - 1;
+
+      // If all sections are completed or this is the final section, show completion screen
+      if (allSectionsCompleted) {
+        // Update form status to completed
+        await supabase
+          .from('forms')
+          .update({ 
+            status: 'completed',
+            progress: 100
+          })
+          .eq('id', formId);
+        
+        // Show completion screen with confetti
+        setIsCompleted(true);
       } else {
         // Show section completion message and move to next section
         toast({
@@ -1017,7 +1210,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
           variant: "default"
         });
         
-        // Move to next section
+        // Move to next section, skipping completed ones
         handleStepNavigation('next');
       }
     } catch (error) {
@@ -1087,17 +1280,20 @@ const renderFormActions = () => {
     // Share functionality is handled by the ShareSection component
   };
 
+  // Add a state to track completed steps
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
   const getStepStatus = (stepId: number): Step['status'] => {
-    if (stepId < currentStep) return 'completed';
+    if (completedSteps.includes(stepId)) return 'completed';
     if (stepId === currentStep) return 'current';
     return 'upcoming';
   };
 
   // Update steps with current status
-  const steps = [
+  const steps: Step[] = [
     { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
     { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
-    { id: 3, title: 'Target Audience', icon: Target, status: getStepStatus(2) },
+    { id: 3, title: 'Target Audience', icon: Users, status: getStepStatus(2) },
     { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
     { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
     { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
@@ -1115,31 +1311,14 @@ const renderFormActions = () => {
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="w-full"
+        className="w-full space-y-8"
       >
-        {/* Form Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white">Business Details</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-business-details">Business Details</h2>
             <p className="text-gray-400 mt-1">Tell us about your business</p>
           </div>
-          <ShareSection formId={1} section="Business Details" />
-        </div>
-
-        {/* Form Progress */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-400">Form Progress</span>
-            <span className="text-sm font-medium text-emerald-400">{formProgress}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div 
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${formProgress}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
+          <ShareSection formId={formId} section="Business Details" />
         </div>
 
         <FormSection>
@@ -1149,14 +1328,14 @@ const renderFormActions = () => {
               {/* Business Identity */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white mb-4">Business Identity</h3>
-            <FormField
+                <FormField
                   key="name"
                   field={formFields[0]} // Business Name
                   value={businessDetails.name}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              errors={errors}
-              touched={touched}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  errors={errors}
+                  touched={touched}
                   autoFocus={true}
                 />
                 <FormField
@@ -1235,10 +1414,10 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">Brand Assets</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-brand-assets">Brand Assets</h2>
             <p className="text-gray-400 mt-1">Define your brand's visual identity</p>
           </div>
-          <ShareSection formId={1} section="Brand Assets" />
+          <ShareSection formId={formId} section="Brand Assets" />
         </div>
 
         <FormSection>
@@ -1594,10 +1773,10 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">Target Audience</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-target-audience">Target Audience</h2>
             <p className="text-gray-400 mt-1">Define who you want to reach with your campaign</p>
           </div>
-          <ShareSection formId={1} section="Target Audience" />
+          <ShareSection formId={formId} section="Target Audience" />
         </div>
 
         <FormSection>
@@ -1741,10 +1920,10 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">Campaign Details</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-campaign-details">Campaign Details</h2>
             <p className="text-gray-400 mt-1">Tell us about your marketing campaign</p>
           </div>
-          <ShareSection formId={1} section="Campaign Details" />
+          <ShareSection formId={formId} section="Campaign Details" />
         </div>
 
         <FormSection>
@@ -1752,19 +1931,19 @@ const renderFormActions = () => {
             {/* Campaign Identity */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white mb-4">Campaign Identity</h3>
-            <FormField
+              <FormField
                 field={{
-                  label: "Campaign Name",
-                  name: "campaignName",
+                  label: "What would make this campaign successful for you?",
+                  name: "successCriteria",
                   icon: Target,
-                  placeholder: "Enter your campaign name",
-                  hint: "A memorable name for your campaign"
+                  placeholder: "Describe what success looks like for this campaign",
+                  hint: "E.g., 'Generate 50 qualified leads' or 'Increase brand awareness by 30%'"
                 }}
-                value={campaign.campaignName}
-                onChange={(e) => setCampaign(prev => ({ ...prev, campaignName: e.target.value }))}
-              onBlur={handleBlur}
-              errors={errors}
-              touched={touched}
+                value={campaign.successCriteria}
+                onChange={(e) => setCampaign(prev => ({ ...prev, successCriteria: e.target.value }))}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
                 autoFocus={true}
               />
               <FormField
@@ -1790,7 +1969,7 @@ const renderFormActions = () => {
                 errors={errors}
                 touched={touched}
               />
-          </div>
+            </div>
 
             {/* Campaign Content */}
             <div className="space-y-4">
@@ -1850,10 +2029,10 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">Typography</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-typography">Typography</h2>
             <p className="text-gray-400 mt-1">Choose fonts for your brand's visual identity</p>
           </div>
-          <ShareSection formId={1} section="Typography" />
+          <ShareSection formId={formId} section="Typography" />
         </div>
 
         <FormSection>
@@ -2015,7 +2194,8 @@ const renderFormActions = () => {
       leadCapture: '',
       statusChanges: '',
       notifications: '',
-      additionalSteps: ''
+      additionalSteps: '',
+      customLeadCapture: ''
     }
   });
 
@@ -2031,10 +2211,10 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">System Integration</h2>
+            <h2 className="text-2xl font-bold text-white" id="section-system-integration">System Integration</h2>
             <p className="text-gray-400 mt-1">Connect your systems for a streamlined workflow</p>
           </div>
-          <ShareSection formId={1} section="System Integration" />
+          <ShareSection formId={formId} section="System Integration" />
         </div>
 
         {/* Help Banner */}
@@ -2065,69 +2245,67 @@ const renderFormActions = () => {
               </div>
               </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Select Your CRM</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SYSTEM_INTEGRATION_OPTIONS.crm.map(option => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setSystemIntegrationData(prev => ({
-                        ...prev,
-                        crm: { ...prev.crm, system: option.value }
-                      }))}
-                      className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-2
-                        ${systemIntegrationData.crm.system === option.value
-                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                        }`}
-                    >
-                      <span className="text-lg">{option.icon}</span>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                {systemIntegrationData.crm.system === 'other' && (
-                <input
-                  type="text"
-                    value={systemIntegrationData.crm.customSystem}
-                    onChange={(e) => setSystemIntegrationData(prev => ({
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Select Your CRM</label>
+              <div className="grid grid-cols-2 gap-3">
+                {SYSTEM_INTEGRATION_OPTIONS.crm.map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSystemIntegrationData(prev => ({
                       ...prev,
-                      crm: { ...prev.crm, customSystem: e.target.value }
+                      crm: { ...prev.crm, system: option.value }
                     }))}
-                    placeholder="Enter your CRM name"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                )}
+                    className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                      ${systemIntegrationData.crm.system === option.value
+                        ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                  >
+                    <span className="flex-shrink-0">{option.icon}</span>
+                    <span>{option.label}</span>
+                  </button>
+                ))}
               </div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">CRM Instance Details</label>
+              {systemIntegrationData.crm.system === 'other' && (
                 <input
                   type="text"
-                  value={systemIntegrationData.crm.instance}
+                  value={systemIntegrationData.crm.customSystem}
                   onChange={(e) => setSystemIntegrationData(prev => ({
                     ...prev,
-                    crm: { ...prev.crm, instance: e.target.value }
+                    crm: { ...prev.crm, customSystem: e.target.value }
                   }))}
-                  placeholder="Your CRM instance name or URL"
+                  placeholder="Enter your CRM name"
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
-                <div className="relative">
-                  <input
-                    type="password"
-                    value={systemIntegrationData.crm.apiKey}
-                    onChange={(e) => setSystemIntegrationData(prev => ({
-                      ...prev,
-                      crm: { ...prev.crm, apiKey: e.target.value }
-                    }))}
-                    placeholder="API Key (if available)"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Info className="w-4 h-4 text-gray-500" />
-                  </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">CRM Instance Details</label>
+              <input
+                type="text"
+                value={systemIntegrationData.crm.instance}
+                onChange={(e) => setSystemIntegrationData(prev => ({
+                  ...prev,
+                  crm: { ...prev.crm, instance: e.target.value }
+                }))}
+                placeholder="Your CRM instance name or URL"
+                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="relative">
+                <input
+                  type="password"
+                  value={systemIntegrationData.crm.apiKey}
+                  onChange={(e) => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    crm: { ...prev.crm, apiKey: e.target.value }
+                  }))}
+                  placeholder="API Key (if available)"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Info className="w-4 h-4 text-gray-500" />
                 </div>
               </div>
             </div>
@@ -2143,70 +2321,44 @@ const renderFormActions = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">Calendar Integration</h3>
-                <p className="text-sm text-gray-400">Connect your calendar and scheduling tools</p>
+                <p className="text-sm text-gray-400">Connect your scheduling tools</p>
               </div>
-              </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Select Calendar System</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SYSTEM_INTEGRATION_OPTIONS.calendar.map(option => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setSystemIntegrationData(prev => ({
-                        ...prev,
-                        calendar: { ...prev.calendar, system: option.value }
-                      }))}
-                      className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-2
-                        ${systemIntegrationData.calendar.system === option.value
-                          ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
-                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                        }`}
-                    >
-                      <span className="text-lg">{option.icon}</span>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Scheduling Tool</label>
+              <div className="grid grid-cols-2 gap-3">
+                {SYSTEM_INTEGRATION_OPTIONS.scheduling.map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSystemIntegrationData(prev => ({
+                      ...prev,
+                      calendar: { ...prev.calendar, schedulingTool: option.value }
+                    }))}
+                    className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                      ${systemIntegrationData.calendar.schedulingTool === option.value
+                        ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                  >
+                    <span className="flex-shrink-0">{option.icon}</span>
+                    <span>{option.label}</span>
+                  </button>
+                ))}
               </div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Scheduling Tool</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SYSTEM_INTEGRATION_OPTIONS.scheduling.map(option => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setSystemIntegrationData(prev => ({
-                        ...prev,
-                        calendar: { ...prev.calendar, schedulingTool: option.value }
-                      }))}
-                      className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-2
-                        ${systemIntegrationData.calendar.schedulingTool === option.value
-                          ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
-                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                        }`}
-                    >
-                      <span className="text-lg">{option.icon}</span>
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                {systemIntegrationData.calendar.schedulingTool === 'other' && (
+              {systemIntegrationData.calendar.schedulingTool === 'other' && (
                 <input
                   type="text"
-                    value={systemIntegrationData.calendar.customTool}
-                    onChange={(e) => setSystemIntegrationData(prev => ({
-                      ...prev,
-                      calendar: { ...prev.calendar, customTool: e.target.value }
-                    }))}
-                    placeholder="Enter your scheduling tool name"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                  />
-                )}
-              </div>
+                  value={systemIntegrationData.calendar.customTool}
+                  onChange={(e) => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    calendar: { ...prev.calendar, customTool: e.target.value }
+                  }))}
+                  placeholder="Enter your scheduling tool name"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+              )}
             </div>
           </div>
 
@@ -2224,58 +2376,121 @@ const renderFormActions = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Lead Capture Process</label>
-                <textarea
-                  value={systemIntegrationData.process.leadCapture}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Lead Capture Method</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    process: { ...prev.process, leadCapture: 'form' }
+                  }))}
+                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                    ${systemIntegrationData.process.leadCapture === 'form'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                >
+                  <span className="flex-shrink-0"><FormInput className="w-4 h-4" /></span>
+                  <span>Web Forms</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    process: { ...prev.process, leadCapture: 'manual' }
+                  }))}
+                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                    ${systemIntegrationData.process.leadCapture === 'manual'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                >
+                  <span className="flex-shrink-0"><UserPlus className="w-4 h-4" /></span>
+                  <span>Manual Entry</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    process: { ...prev.process, leadCapture: 'import' }
+                  }))}
+                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                    ${systemIntegrationData.process.leadCapture === 'import'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                >
+                  <span className="flex-shrink-0"><FileImport className="w-4 h-4" /></span>
+                  <span>Data Import</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSystemIntegrationData(prev => ({
+                    ...prev,
+                    process: { ...prev.process, leadCapture: 'other' }
+                  }))}
+                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
+                    ${systemIntegrationData.process.leadCapture === 'other'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                    }`}
+                >
+                  <span className="flex-shrink-0"><Plus className="w-4 h-4" /></span>
+                  <span>Other</span>
+                </button>
+              </div>
+              {systemIntegrationData.process.leadCapture === 'other' && (
+                <input
+                  type="text"
+                  value={systemIntegrationData.process.customLeadCapture || ''}
                   onChange={(e) => setSystemIntegrationData(prev => ({
                     ...prev,
-                    process: { ...prev.process, leadCapture: e.target.value }
+                    process: { ...prev.process, customLeadCapture: e.target.value }
                   }))}
-                  placeholder="Describe your ideal lead capture workflow (e.g., Form submission → CRM entry → Sales rep notification)"
-                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  placeholder="Specify your lead capture method"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
-              </div>
+              )}
+            </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Status Change Workflow</label>
-                <textarea
-                  value={systemIntegrationData.process.statusChanges}
-                  onChange={(e) => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, statusChanges: e.target.value }
-                  }))}
-                  placeholder="How should lead status changes be handled? (e.g., Qualified → Meeting Scheduled → Demo Completed)"
-                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Status Change Workflow</label>
+              <textarea
+                value={systemIntegrationData.process.statusChanges}
+                onChange={(e) => setSystemIntegrationData(prev => ({
+                  ...prev,
+                  process: { ...prev.process, statusChanges: e.target.value }
+                }))}
+                placeholder="How should lead status changes be handled? (e.g., Qualified → Meeting Scheduled → Demo Completed)"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Team Notifications</label>
-                <textarea
-                  value={systemIntegrationData.process.notifications}
-                  onChange={(e) => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, notifications: e.target.value }
-                  }))}
-                  placeholder="How should your team be notified of updates? (e.g., Email for new leads, Slack for status changes)"
-                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Team Notifications</label>
+              <textarea
+                value={systemIntegrationData.process.notifications}
+                onChange={(e) => setSystemIntegrationData(prev => ({
+                  ...prev,
+                  process: { ...prev.process, notifications: e.target.value }
+                }))}
+                placeholder="How should your team be notified of updates? (e.g., Email for new leads, Slack for status changes)"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Additional Steps or Automation</label>
-                <textarea
-                  value={systemIntegrationData.process.additionalSteps}
-                  onChange={(e) => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, additionalSteps: e.target.value }
-                  }))}
-                  placeholder="Any other steps or automation you'd like to implement? (e.g., Follow-up email sequences, Lead scoring)"
-                  className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-300">Additional Steps or Automation</label>
+              <textarea
+                value={systemIntegrationData.process.additionalSteps}
+                onChange={(e) => setSystemIntegrationData(prev => ({
+                  ...prev,
+                  process: { ...prev.process, additionalSteps: e.target.value }
+                }))}
+                placeholder="Any other steps or automation you'd like to implement? (e.g., Follow-up email sequences, Lead scoring)"
+                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
             </div>
           </div>
         </FormSection>
@@ -2386,41 +2601,138 @@ const renderFormActions = () => {
     );
   };
 
+  // Update progress in Supabase when completedSteps changes
+  useEffect(() => {
+    if (!formId || completedSteps.length === 0) return;
+    
+    const updateProgressInSupabase = async () => {
+      const newProgress = calculateProgress();
+      
+      try {
+        await supabase
+          .from('forms')
+          .update({ 
+            progress: newProgress
+          })
+          .eq('id', formId);
+          
+        // Invalidate the forms query to update the dashboard
+        queryClient.invalidateQueries({ queryKey: ["forms"] });
+      } catch (error) {
+        console.error('Error updating progress in Supabase:', error);
+      }
+    };
+    
+    updateProgressInSupabase();
+  }, [completedSteps, formId]);
+
+  // Add a useEffect to handle hashtag navigation
+  useEffect(() => {
+    // Skip if we're still showing the welcome screen
+    if (showWelcome) return;
+    
+    // Check if there's a hashtag in the URL
+    const hash = window.location.hash;
+    if (!hash) return;
+    
+    // Remove the # character
+    const sectionSlug = hash.substring(1);
+    console.log("Found section hashtag:", sectionSlug);
+    
+    // Map section slugs to step indices
+    const sectionMap: Record<string, number> = {
+      'business-details': 0,
+      'campaign-details': 1,
+      'target-audience': 2,
+      'typography': 3,
+      'brand-assets': 4,
+      'system-integration': 5
+    };
+    
+    // If we have a matching section, navigate to it
+    if (sectionSlug in sectionMap) {
+      const targetStep = sectionMap[sectionSlug];
+      console.log("Navigating to step:", targetStep);
+      setCurrentStep(targetStep);
+      
+      // Scroll the section into view with a slight delay to ensure rendering
+      setTimeout(() => {
+        const sectionElement = document.getElementById(`section-${sectionSlug}`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
+    }
+  }, [showWelcome]);
+
   return (
-    <div className="min-h-screen bg-[#181c24] flex">
-      {/* Fixed Side Navigation */}
-      <div className="fixed top-0 left-0 h-screen w-64 bg-gray-800/50 border-r border-gray-800 flex flex-col">
-        <div className="p-6 flex-1 overflow-y-auto">
-        <ProgressTracker
-          steps={steps}
-          currentStep={currentStep}
-          onStepClick={handleStepClick}
-          isAnimating={animatingNav}
-        />
-      </div>
-
-        {/* Progress Pie Chart - Fixed at bottom */}
-        <div className="p-6 pt-4 border-t border-gray-700/50">
-          <div className="flex flex-col items-center">
-            <p className="text-sm text-gray-400 mb-3">Total Progress</p>
-            <ProgressPie progress={calculateProgress()} />
-          </div>
+    <div className="min-h-screen bg-[#02040a] flex">
+      {showWelcome ? (
+        <div className="flex-1 flex items-center justify-center">
+          <WelcomeScreen 
+            clientName={businessDetails.name || ''} 
+            onStart={() => setShowWelcome(false)} 
+          />
         </div>
-      </div>
-
-      {/* Scrollable Main Content Area */}
-      <div className="flex-1 ml-64">
-        <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              {renderFormContent()}
-            </AnimatePresence>
-          </div>
-          {renderFormActions()}
-          </div>
+      ) : isCompleted ? (
+        <div className="flex-1 flex items-center justify-center">
+          <CompletionScreen 
+            clientName={businessDetails.name || ''} 
+            formData={{
+              businessDetails,
+              campaign,
+              audience,
+              typography,
+              brandAssets,
+              systemIntegration: systemIntegrationData
+            }}
+            onClose={() => window.close()} 
+            isAdmin={false}
+          />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Left sidebar with progress tracker */}
+          <div className="hidden md:block fixed top-0 left-0 h-screen w-64 bg-[#02040a] border-r border-gray-800 flex flex-col">
+            <div className="p-6 flex-1 overflow-y-auto">
+              <h1 className="text-2xl font-bold text-white mb-6">Onboarding</h1>
+              <ProgressTracker 
+                steps={steps} 
+                currentStep={currentStep} 
+                onStepClick={handleStepClick}
+                isAnimating={animatingNav}
+              />
+            </div>
+            
+            {/* Progress Pie Chart - Fixed at bottom */}
+            <div className="p-6 pt-4 border-t border-gray-700/50">
+              <div className="flex flex-col items-center">
+                <p className="text-sm text-gray-400 mb-3">Total Progress</p>
+                <ProgressPie progress={calculateProgress()} />
+              </div>
+            </div>
+          </div>
+
+          {/* Main content area */}
+          <div className="flex-1 md:ml-64 bg-[#0d1116] min-h-screen">
+            <div className="max-w-4xl mx-auto p-6 md:p-10">
+              {/* Mobile progress indicator */}
+              <div className="md:hidden mb-8">
+                <h1 className="text-2xl font-bold text-white mb-6">Onboarding</h1>
+                <ProgressTracker steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
+              </div>
+
+              {/* Form content */}
+              <div className="relative">
+                <AnimatePresence mode="wait">
+                  {renderFormContent()}
+                </AnimatePresence>
+              </div>
+              {renderFormActions()}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

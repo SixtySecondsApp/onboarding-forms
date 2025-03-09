@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection, type IStorage } from "./types";
+import { type User, type InsertUser, type OnboardingForm, type InsertForm, type FormSection, type InsertSection, type FormSubmission, type InsertFormSubmission, type SystemSettings, type IStorage } from "./types";
 import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
+import crypto from 'crypto';
 
 export class SupabaseStorage implements IStorage {
   private supabase;
@@ -156,10 +158,60 @@ export class SupabaseStorage implements IStorage {
   async updateSectionData(id: number, data: any): Promise<void> {
     const { error } = await this.supabase
       .from('form_sections')
-      .update({ data })
+      .update({ 
+        data,
+        status: 'completed' // Mark section as completed when data is updated
+      })
       .eq('id', id);
 
     if (error) throw error;
+    
+    // After updating section data, check if we should send a webhook notification
+    try {
+      const { data: section } = await this.supabase
+        .from('form_sections')
+        .select('form_id, section')
+        .eq('id', id)
+        .single();
+      
+      if (section) {
+        // Get webhook settings
+        const settings = await this.getWebhookSettings();
+        
+        // If section notifications are enabled, send the webhook
+        if (settings.webhookEnabled && settings.notifyOnSectionCompletion) {
+          await this.sendSectionWebhookNotification(section.form_id, id, data, section.section);
+        }
+        
+        // Check if this was the last section to be completed
+        const { data: sections } = await this.supabase
+          .from('form_sections')
+          .select('status')
+          .eq('form_id', section.form_id);
+        
+        const allSectionsCompleted = sections && sections.every(s => s.status === 'completed');
+        
+        // If all sections are completed, update the form status and send a form completion webhook if enabled
+        if (allSectionsCompleted) {
+          // Update form status to completed
+          await this.supabase
+            .from('forms')
+            .update({ 
+              status: 'completed',
+              progress: 100
+            })
+            .eq('id', section.form_id);
+          
+          // Send form completion webhook if enabled
+          if (settings.webhookEnabled && settings.notifyOnFormCompletion) {
+            await this.sendFormCompletionWebhookNotification(section.form_id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling section completion:', error);
+      // Don't throw the error here, as we don't want to fail the section update
+    }
   }
 
   async getSections(formId: number): Promise<FormSection[]> {
@@ -168,6 +220,267 @@ export class SupabaseStorage implements IStorage {
       .select('*')
       .eq('form_id', formId)
       .order('order_index', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Webhook operations - updated for system-wide settings
+  async getWebhookSettings(): Promise<SystemSettings> {
+    // Always get the first record (we only have one)
+    const { data, error } = await this.supabase
+      .from('system_settings')
+      .select('*')
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateWebhookSettings(settings: { webhookUrl?: string, webhookEnabled?: boolean, webhookSecret?: string }): Promise<void> {
+    // Always update the first record (we only have one)
+    const { data: existingSettings } = await this.supabase
+      .from('system_settings')
+      .select('id')
+      .order('id', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!existingSettings) {
+      // If no settings exist, create a new record
+      const { error } = await this.supabase
+        .from('system_settings')
+        .insert({
+          ...settings,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+    } else {
+      // Update the existing record
+      const { error } = await this.supabase
+        .from('system_settings')
+        .update({
+          ...settings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSettings.id);
+
+      if (error) throw error;
+    }
+  }
+
+  async generateWebhookSecret(): Promise<string> {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  async sendWebhookNotification(formId: number, data: any): Promise<boolean> {
+    return this.sendSubmissionWebhookNotification(formId, data);
+  }
+
+  // Send webhook notification for section completion
+  async sendSectionWebhookNotification(formId: number, sectionId: number, sectionData: any, sectionName: string): Promise<boolean> {
+    try {
+      // Get the global webhook settings
+      const { data: settings, error } = await this.supabase
+        .from('system_settings')
+        .select('webhook_url, webhook_enabled, webhook_secret, notify_on_section_completion')
+        .order('id', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      
+      // If webhook is not enabled or URL is not set or section notifications are disabled, skip
+      if (!settings.webhook_enabled || !settings.webhook_url || !settings.notify_on_section_completion) {
+        return false;
+      }
+
+      // Get form details to include in the payload
+      const form = await this.getForm(formId);
+      
+      // Prepare the payload
+      const payload = {
+        event: 'section_completion',
+        form_id: formId,
+        form_name: form?.clientName || 'Unknown',
+        client_email: form?.clientEmail || 'Unknown',
+        section_id: sectionId,
+        section_name: sectionName,
+        data: sectionData,
+        timestamp: new Date().toISOString()
+      };
+
+      // Generate signature if secret is available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (settings.webhook_secret) {
+        const signature = crypto
+          .createHmac('sha256', settings.webhook_secret)
+          .update(JSON.stringify(payload))
+          .digest('hex');
+        
+        headers['X-Webhook-Signature'] = signature;
+      }
+
+      // Send the webhook
+      await axios.post(settings.webhook_url, payload, { headers });
+      return true;
+    } catch (error) {
+      console.error('Error sending section webhook notification:', error);
+      return false;
+    }
+  }
+
+  // Send webhook notification for form completion with all sections
+  async sendFormCompletionWebhookNotification(formId: number): Promise<boolean> {
+    try {
+      // Get the global webhook settings
+      const { data: settings, error } = await this.supabase
+        .from('system_settings')
+        .select('webhook_url, webhook_enabled, webhook_secret, notify_on_form_completion')
+        .order('id', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      
+      // If webhook is not enabled or URL is not set or form notifications are disabled, skip
+      if (!settings.webhook_enabled || !settings.webhook_url || !settings.notify_on_form_completion) {
+        return false;
+      }
+
+      // Get form details
+      const form = await this.getForm(formId);
+      if (!form) return false;
+      
+      // Get all sections for this form
+      const sections = await this.getSections(formId);
+      
+      // Prepare the payload with all section data
+      const payload = {
+        event: 'form_completion',
+        form_id: formId,
+        form_name: form.clientName,
+        client_email: form.clientEmail,
+        form_data: form.data || {},
+        sections: sections.map(section => ({
+          section_id: section.id,
+          section_name: section.section,
+          data: section.data || {}
+        })),
+        timestamp: new Date().toISOString()
+      };
+
+      // Generate signature if secret is available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (settings.webhook_secret) {
+        const signature = crypto
+          .createHmac('sha256', settings.webhook_secret)
+          .update(JSON.stringify(payload))
+          .digest('hex');
+        
+        headers['X-Webhook-Signature'] = signature;
+      }
+
+      // Send the webhook
+      await axios.post(settings.webhook_url, payload, { headers });
+      return true;
+    } catch (error) {
+      console.error('Error sending form completion webhook notification:', error);
+      return false;
+    }
+  }
+
+  // Original sendWebhookNotification renamed to sendSubmissionWebhookNotification for clarity
+  async sendSubmissionWebhookNotification(formId: number, data: any): Promise<boolean> {
+    try {
+      // Get the global webhook settings
+      const { data: settings, error } = await this.supabase
+        .from('system_settings')
+        .select('webhook_url, webhook_enabled, webhook_secret')
+        .order('id', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      
+      // If webhook is not enabled or URL is not set, skip
+      if (!settings.webhook_enabled || !settings.webhook_url) {
+        return false;
+      }
+
+      // Get form details to include in the payload
+      const form = await this.getForm(formId);
+      
+      // Prepare the payload
+      const payload = {
+        event: 'form_submission',
+        form_id: formId,
+        form_name: form?.clientName || 'Unknown',
+        client_email: form?.clientEmail || 'Unknown',
+        data,
+        timestamp: new Date().toISOString()
+      };
+
+      // Generate signature if secret is available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (settings.webhook_secret) {
+        const signature = crypto
+          .createHmac('sha256', settings.webhook_secret)
+          .update(JSON.stringify(payload))
+          .digest('hex');
+        
+        headers['X-Webhook-Signature'] = signature;
+      }
+
+      // Send the webhook
+      await axios.post(settings.webhook_url, payload, { headers });
+      return true;
+    } catch (error) {
+      console.error('Error sending submission webhook notification:', error);
+      return false;
+    }
+  }
+
+  // Form submission operations
+  async createSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
+    const { data, error } = await this.supabase
+      .from('form_submissions')
+      .insert(submission)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getSubmissions(formId: number): Promise<FormSubmission[]> {
+    const { data, error } = await this.supabase
+      .from('form_submissions')
+      .select('*')
+      .eq('form_id', formId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getAllSubmissions(): Promise<FormSubmission[]> {
+    const { data, error } = await this.supabase
+      .from('form_submissions')
+      .select('*, forms(client_name, client_email)')
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;

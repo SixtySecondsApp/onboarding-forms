@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminAuth from "@/pages/admin/auth";
+import WebhookSettings from "@/pages/admin/webhook-settings";
 import OnboardingPage from "@/pages/onboarding/[id]";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={AdminAuth} />
       <Route path="/admin" component={AdminAuth} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/webhook-settings" component={WebhookSettings} />
       <Route path="/onboarding/:id" component={OnboardingPage} />
       <Route component={NotFound} />
     </Switch>
