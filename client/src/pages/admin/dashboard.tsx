@@ -50,9 +50,21 @@ export default function AdminDashboard() {
     setLocation("/admin");
   };
 
+  // Update URL construction methods to avoid double slashes
+  const getFormUrl = (formId: number) => {
+    const baseUrl = window.location.origin.replace(/\/$/, '');
+    return `${baseUrl}/onboarding/${formId}`;
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // First check if we have an authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('You must be logged in to create forms');
+      }
+
       const { data: form, error } = await supabase
         .from('forms')
         .insert({
@@ -61,6 +73,7 @@ export default function AdminDashboard() {
           progress: 0,
           status: 'pending',
           data: {},
+          created_by: user.id // Add creator ID for RLS
         })
         .select()
         .single();
@@ -76,7 +89,7 @@ export default function AdminDashboard() {
         description: "New client onboarding created",
       });
 
-      const formUrl = `${window.location.origin}/onboarding/${form.id}`;
+      const formUrl = getFormUrl(form.id);
       navigator.clipboard.writeText(formUrl).then(() => {
         toast({
           title: "Form URL Copied",
@@ -118,7 +131,7 @@ export default function AdminDashboard() {
   };
 
   const copyFormUrl = (formId: number) => {
-    const url = `${window.location.origin}/onboarding/${formId}`;
+    const url = getFormUrl(formId);
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "URL Copied",
@@ -128,7 +141,8 @@ export default function AdminDashboard() {
   };
 
   const openForm = (formId: number) => {
-    window.open(`/onboarding/${formId}`, '_blank');
+    const url = getFormUrl(formId);
+    window.open(url, '_blank');
   };
 
   if (error) {
@@ -197,9 +211,9 @@ export default function AdminDashboard() {
                 </form>
               </DialogContent>
             </Dialog>
-            <Button 
-              variant="ghost" 
-              onClick={handleLogout} 
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
               className="bg-white/10 hover:bg-white/20 text-white font-medium border-0"
             >
               Logout
@@ -233,9 +247,9 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {forms.map((form) => (
-                    <TableRow 
-                      key={form.id} 
-                      className="cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50" 
+                    <TableRow
+                      key={form.id}
+                      className="cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50"
                       onClick={() => openForm(form.id)}
                     >
                       <TableCell>
