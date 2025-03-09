@@ -661,93 +661,52 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       }
   };
 
-  // Update the calculateProgress function to be more accurate
+  // Update the progress calculation and update functions
   const calculateProgress = () => {
-    const sections = {
-      businessInfo: {
-        required: ['businessName', 'phone', 'email'],
-        optional: ['website'],
-        weight: 0.2
-      },
-      brandAssets: {
-        required: ['mainColor', 'secondaryColor', 'highlightColor'],
-        optional: ['logo'],
-        weight: 0.2
-      },
-      typography: {
-        required: ['titleFont', 'bodyFont'],
-        optional: ['subtitleFont'],
-        weight: 0.2
-      },
-      audience: {
-        required: ['jobTitles', 'industries', 'companySize'],
-        optional: [],
-        weight: 0.2
-      },
-      systemIntegration: {
-        required: [],
-        optional: ['crm.system', 'calendar.system', 'process.leadCapture'],
-        weight: 0.2
+    // Count total fields and completed fields
+    const totalFields = getRequiredFields().length;
+    let completedFields = 0;
+
+    // Check each required field based on current step
+    getRequiredFields().forEach(field => {
+      if (field in businessDetails && businessDetails[field] && !errors[field]) {
+        completedFields++;
+      }
+      if (field in campaign && campaign[field] && !errors[field]) {
+        completedFields++;
+      }
+      if (field in audience && audience[field] && !errors[field]) {
+        completedFields++;
+      }
+      if (field in typography && typography[field] && !errors[field]) {
+        completedFields++;
+      }
+    });
+
+    return Math.round((completedFields / totalFields) * 100);
+  };
+
+  // Add an effect to update progress when form data changes
+  useEffect(() => {
+    const updateProgress = async () => {
+      const newProgress = calculateProgress();
+      if (newProgress !== formProgress) {
+        setFormProgress(newProgress);
+        try {
+          await supabase
+            .from('forms')
+            .update({ progress: newProgress })
+            .eq('id', formId);
+            
+          queryClient.invalidateQueries({ queryKey: ["forms"] });
+        } catch (error) {
+          console.error('Error updating progress:', error);
+        }
       }
     };
 
-    let totalProgress = 0;
-
-    // Calculate business info progress
-    const businessInfoRequired = sections.businessInfo.required.filter(field => 
-      businessDetails[field as keyof typeof businessDetails] && 
-      !errors[field]
-    ).length;
-    const businessInfoOptional = sections.businessInfo.optional.filter(field => 
-      businessDetails[field as keyof typeof businessDetails] && 
-      !errors[field]
-    ).length;
-    const businessInfoTotal = businessInfoRequired / sections.businessInfo.required.length;
-    const businessInfoBonus = businessInfoOptional > 0 ? 0.2 : 0;
-    totalProgress += (businessInfoTotal + businessInfoBonus) * sections.businessInfo.weight;
-
-    // Calculate brand assets progress
-    const brandAssetsRequired = sections.brandAssets.required.filter(field => 
-      brandAssets[field as keyof typeof brandAssets]
-    ).length;
-    const brandAssetsOptional = brandAssets.logo ? 1 : 0;
-    const brandAssetsTotal = brandAssetsRequired / sections.brandAssets.required.length;
-    const brandAssetsBonus = brandAssetsOptional > 0 ? 0.2 : 0;
-    totalProgress += (brandAssetsTotal + brandAssetsBonus) * sections.brandAssets.weight;
-
-    // Calculate typography progress
-    const typographyRequired = sections.typography.required.filter(field => 
-      typography[field as keyof typeof typography]
-    ).length;
-    const typographyOptional = typography.subtitleFont ? 1 : 0;
-    const typographyTotal = typographyRequired / sections.typography.required.length;
-    const typographyBonus = typographyOptional > 0 ? 0.2 : 0;
-    totalProgress += (typographyTotal + typographyBonus) * sections.typography.weight;
-
-    // Calculate audience progress
-    const audienceRequired = sections.audience.required.filter(field => 
-      audience[field as keyof typeof audience] && 
-      Array.isArray(audience[field as keyof typeof audience]) && 
-      audience[field as keyof typeof audience].length > 0
-    ).length;
-    const audienceTotal = audienceRequired / sections.audience.required.length;
-    totalProgress += audienceTotal * sections.audience.weight;
-
-    // Calculate system integration progress - all fields are optional
-    const systemFields = sections.systemIntegration.optional;
-    const completedSystemFields = systemFields.filter(field => {
-      const [section, key] = field.split('.');
-      return systemIntegrationData[section] && systemIntegrationData[section][key];
-    }).length;
-    const systemTotal = completedSystemFields / systemFields.length;
-    totalProgress += systemTotal * sections.systemIntegration.weight;
-
-    return Math.min(100, totalProgress * 100); // Ensure we don't exceed 100%
-  };
-
-  useEffect(() => {
-    setFormProgress(calculateProgress());
-  }, [businessDetails, brandAssets, campaign, audience, errors, currentStep]);
+    updateProgress();
+  }, [businessDetails, campaign, audience, typography, errors]);
 
   useEffect(() => {
     if (sectionId && section?.data) {
@@ -940,15 +899,45 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     setErrors(prev => ({ ...prev, companySize: error }));
   };
 
-  // Update the handleStepNavigation function
-  const handleStepNavigation = (direction: 'next' | 'previous') => {
+  // Update the handleStepNavigation function to save progress
+  const handleStepNavigation = async (direction: 'next' | 'previous') => {
     if (animatingNav) return;
     setAnimatingNav(true);
+
+    // Calculate and save progress before moving to next step
     if (direction === 'next') {
+      const newProgress = calculateProgress();
+      try {
+        await supabase
+          .from('forms')
+          .update({ 
+            progress: newProgress,
+            data: {
+              ...form?.data,
+              businessDetails,
+              campaign,
+              audience,
+              typography
+            }
+          })
+          .eq('id', formId);
+
+        // Invalidate the forms query to update the dashboard
+        queryClient.invalidateQueries({ queryKey: ["forms"] });
+      } catch (error) {
+        console.error('Error updating progress:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save progress",
+          variant: "destructive"
+        });
+      }
+
       setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
     } else {
       setCurrentStep(prev => Math.max(prev - 1, 0));
     }
+
     setTimeout(() => {
       setAnimatingNav(false);
     }, 600);
