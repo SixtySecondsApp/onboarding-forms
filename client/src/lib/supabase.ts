@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -7,10 +8,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Remove any trailing slashes from the URL
-const cleanUrl = supabaseUrl.replace(/\/$/, '');
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
-export const supabase = createClient(cleanUrl, supabaseAnonKey);
+export type Form = {
+  id: number;
+  clientName: string;
+  clientEmail: string;
+  progress: number;
+  status: 'pending' | 'in_progress' | 'completed';
+  data: Record<string, any>;
+  lastReminder: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InsertForm = Omit<Form, 'id' | 'created_at' | 'updated_at'>;
 
 // Test user creation helper
 export const createTestUser = async (email: string, password: string) => {
@@ -56,17 +73,55 @@ export const getCurrentUser = async () => {
   return user;
 };
 
-// Helper function to create a new form
-export const createForm = async (formData: any) => {
+// Helper function to create a form
+export const createForm = async (formData: Partial<InsertForm>) => {
+  console.log('Creating form with data:', formData); // Debug log
+
   const { data, error } = await supabase
     .from('forms')
-    .insert(formData)
+    .insert({
+      clientName: formData.clientName,
+      clientEmail: formData.clientEmail,
+      progress: 0,
+      status: 'pending',
+      data: {},
+      lastReminder: null
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase error:', error); // Debug log
+    throw error;
+  }
+
+  return data;
+};
+
+// Helper function to get all forms
+export const getForms = async () => {
+  const { data, error } = await supabase
+    .from('forms')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
+// Helper function to update form
+export const updateForm = async (id: number, formData: Partial<Form>) => {
+  const { data, error } = await supabase
+    .from('forms')
+    .update(formData)
+    .eq('id', id)
     .select()
     .single();
 
   if (error) throw error;
   return data;
 };
+
 
 // Helper function to update form data
 export const updateFormData = async (formId: string, data: any) => {

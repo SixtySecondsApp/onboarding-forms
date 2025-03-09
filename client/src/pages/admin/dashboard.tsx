@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, Mail, Copy, Link, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Mail, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,7 +19,9 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { InsertForm, OnboardingForm } from "@shared/schema";
+import type { Database } from "@/types/supabase";
+
+type Form = Database['public']['Tables']['forms']['Row'];
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -30,7 +32,7 @@ export default function AdminDashboard() {
     clientEmail: "",
   });
 
-  const { data: forms = [], isLoading, error } = useQuery<OnboardingForm[]>({
+  const { data: forms = [], isLoading, error } = useQuery<Form[]>({
     queryKey: ["forms"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,12 +56,11 @@ export default function AdminDashboard() {
       const { data: form, error } = await supabase
         .from('forms')
         .insert({
-          clientName: newClient.clientName,
-          clientEmail: newClient.clientEmail,
+          client_name: newClient.clientName,
+          client_email: newClient.clientEmail,
           progress: 0,
           status: 'pending',
           data: {},
-          last_reminder: null
         })
         .select()
         .single();
@@ -70,13 +71,11 @@ export default function AdminDashboard() {
       setIsCreateOpen(false);
       setNewClient({ clientName: "", clientEmail: "" });
 
-      // Show success message
       toast({
         title: "Success",
         description: "New client onboarding created",
       });
 
-      // Get the form URL
       const formUrl = `${window.location.origin}/onboarding/${form.id}`;
       navigator.clipboard.writeText(formUrl).then(() => {
         toast({
@@ -84,11 +83,11 @@ export default function AdminDashboard() {
           description: "Share this URL with your client to start the onboarding process",
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating form:', error);
       toast({
         title: "Error",
-        description: "Failed to create new client onboarding",
+        description: error.message || "Failed to create new client onboarding",
         variant: "destructive"
       });
     }
@@ -108,22 +107,18 @@ export default function AdminDashboard() {
         title: "Success",
         description: "Reminder email sent",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending reminder:', error);
       toast({
         title: "Error",
-        description: "Failed to send reminder",
+        description: error.message || "Failed to send reminder",
         variant: "destructive"
       });
     }
   };
 
-  const getFormUrl = (formId: number) => {
-    return `${window.location.origin}/onboarding/${formId}`;
-  };
-
   const copyFormUrl = (formId: number) => {
-    const url = getFormUrl(formId);
+    const url = `${window.location.origin}/onboarding/${formId}`;
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "URL Copied",
@@ -133,7 +128,7 @@ export default function AdminDashboard() {
   };
 
   const openForm = (formId: number) => {
-    window.open(getFormUrl(formId), '_blank');
+    window.open(`/onboarding/${formId}`, '_blank');
   };
 
   if (error) {
@@ -149,8 +144,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-      <div className="max-w-6xl mx-auto relative">
+      <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">Client Onboarding</h1>
@@ -246,9 +240,9 @@ export default function AdminDashboard() {
                     >
                       <TableCell>
                         <div>
-                          <div className="font-medium text-white">{form.clientName}</div>
+                          <div className="font-medium text-white">{form.client_name}</div>
                           <div className="text-sm text-gray-400">
-                            {form.clientEmail}
+                            {form.client_email}
                           </div>
                         </div>
                       </TableCell>
@@ -265,8 +259,8 @@ export default function AdminDashboard() {
                       </TableCell>
                       <TableCell>
                         <span className="text-gray-400">
-                          {form.lastReminder
-                            ? new Date(form.lastReminder).toLocaleDateString()
+                          {form.last_reminder
+                            ? new Date(form.last_reminder).toLocaleDateString()
                             : "Never"}
                         </span>
                       </TableCell>
