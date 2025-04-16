@@ -121,4 +121,58 @@ To run the automated end-to-end tests:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Theme Support
+
+The application supports both light and dark modes. The theme system works as follows:
+
+### Theme Context
+
+- Uses React Context API to provide theme state and toggle functionality across the application
+- Stores theme preference in localStorage for persistence between sessions
+- Default theme is dark mode if no preference is stored
+
+### Theme Toggles
+
+There are two theme toggle components:
+
+1. **ThemeToggle**: Used in the admin dashboard sidebar and other admin pages
+2. **OnboardingThemeToggle**: Used in onboarding forms with a slightly different styling
+
+### Usage
+
+To use the theme functionality in a component:
+
+```jsx
+import { useTheme } from '@/lib/theme-context';
+
+function MyComponent() {
+  const { theme, toggleTheme } = useTheme();
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <button onClick={toggleTheme}>Toggle Theme</button>
+    </div>
+  );
+}
+```
+
+### Styling for Dark/Light Modes
+
+The application uses Tailwind CSS for styling with the `dark:` variant for dark mode specific styles. For example:
+
+```jsx
+<div className="bg-white text-black dark:bg-gray-900 dark:text-white">
+  Theme-aware content
+</div>
+```
+
+### Testing
+
+Theme functionality is fully tested in `tests/theme.test.tsx` with tests for:
+- Default theme initialization
+- Loading stored theme preferences
+- Toggling between themes
+- Rendering theme toggle components 

@@ -4,6 +4,7 @@ import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSectionData } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { OnboardingThemeToggle } from "@/components/onboarding/ThemeToggle";
 
 export default function SharedSectionPage() {
   const { id } = useParams();
@@ -28,6 +29,7 @@ export default function SharedSectionPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <OnboardingThemeToggle />
         <div className="text-white">Loading shared section...</div>
       </div>
     );
@@ -37,12 +39,13 @@ export default function SharedSectionPage() {
     console.error("Error or no section:", error);
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <OnboardingThemeToggle />
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
               <h1 className="text-2xl font-bold mb-2">Section Not Found</h1>
               <p className="text-gray-500">
-                The shared section you're looking for doesn't exist or has expired.
+                The section you're looking for doesn't exist or has expired.
               </p>
               <p className="text-gray-500 mt-2">
                 Error details: {error ? (error as Error).message : "No section data found"}
@@ -57,6 +60,7 @@ export default function SharedSectionPage() {
                 </Button>
                 <Button 
                   onClick={() => window.location.href = '/'}
+                  variant="outline"
                 >
                   Go to Home
                 </Button>
@@ -73,6 +77,7 @@ export default function SharedSectionPage() {
     console.error("Section has no form_id:", section);
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <OnboardingThemeToggle />
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
@@ -101,5 +106,10 @@ export default function SharedSectionPage() {
     );
   }
 
-  return <OnboardingForm formId={section.form_id} sectionId={id} />;
+  return (
+    <>
+      <OnboardingThemeToggle />
+      <OnboardingForm formId={section.form_id} sectionId={id} />
+    </>
+  );
 } 

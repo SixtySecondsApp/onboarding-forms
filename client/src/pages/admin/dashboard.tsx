@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
   Plus, Mail, Copy, ExternalLink, Loader2, Check, FileText, 
-  Trash2, Lock, ToggleLeft, ToggleRight, Sun, Moon, AlertTriangle
+  Trash2, Lock, ToggleLeft, ToggleRight, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,21 +28,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Form } from "@/lib/supabase";
 import { generateUniqueSlug } from "@/lib/utils";
+import { useTheme } from "@/lib/theme-context";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [formPassword, setFormPassword] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [newClient, setNewClient] = useState({
     client_name: "",
     client_email: "",
@@ -308,86 +310,35 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    // Update the theme in the document
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-    // Store the preference in localStorage
-    localStorage.setItem('theme', isDarkMode ? 'light' : 'dark');
+  // Add a function to get button styling based on the current theme
+  const getButtonStyle = () => {
+    return theme === 'dark'
+      ? "h-8 w-8 bg-gray-800 hover:bg-gray-700 text-gray-100 border-0"
+      : "h-8 w-8 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300";
   };
-
-  // Initialize theme from localStorage on component mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark');
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else {
-      // Default to dark mode if no preference is stored
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-400">{error.message}</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-full">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-500">{error.message}</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+    <AdminLayout>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Client Onboarding</h1>
-            <p className="text-gray-400 mt-1">Manage and track your client onboarding progress</p>
+            <h1 className="text-3xl font-bold">Client Onboarding</h1>
+            <p className="text-gray-500 mt-1">Manage and track your client onboarding progress</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={toggleTheme}
-                    className="bg-white/10 hover:bg-white/20 text-white border-0"
-                  >
-                    {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Toggle {isDarkMode ? 'Light' : 'Dark'} Mode</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setLocation("/admin/api-docs")}
-                    className="bg-white/10 hover:bg-white/20 text-white border-0"
-                  >
-                    <FileText className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>API Documentation</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
+          <div>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
@@ -395,16 +346,16 @@ export default function AdminDashboard() {
                   New Client
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-gray-900/95 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-white">Create New Client Onboarding</DialogTitle>
-                  <DialogDescription className="text-gray-400">
+                  <DialogTitle className="text-2xl font-bold">Create New Client Onboarding</DialogTitle>
+                  <DialogDescription>
                     Start a new client onboarding process by providing their details below.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="clientName" className="text-gray-300">Client Name</Label>
+                    <Label htmlFor="clientName">Client Name</Label>
                     <Input
                       id="clientName"
                       value={newClient.client_name}
@@ -412,11 +363,10 @@ export default function AdminDashboard() {
                         setNewClient({ ...newClient, client_name: e.target.value })
                       }
                       required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="clientEmail" className="text-gray-300">Client Email</Label>
+                    <Label htmlFor="clientEmail">Client Email</Label>
                     <Input
                       id="clientEmail"
                       type="email"
@@ -425,7 +375,6 @@ export default function AdminDashboard() {
                         setNewClient({ ...newClient, client_email: e.target.value })
                       }
                       required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
                     />
                   </div>
                   <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
@@ -434,32 +383,12 @@ export default function AdminDashboard() {
                 </form>
               </DialogContent>
             </Dialog>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleLogout}
-                    className="bg-white/10 hover:bg-white/20 text-white border-0"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Logout</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
 
-        <Card className="bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl">
-          <CardHeader className="border-b border-gray-800">
-            <CardTitle className="text-xl font-semibold text-white">Client Progress</CardTitle>
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle className="text-xl font-semibold">Client Progress</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
@@ -468,38 +397,38 @@ export default function AdminDashboard() {
               </div>
             ) : forms.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-400">No clients added yet</p>
+                <p className="text-gray-500">No clients added yet</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-b border-gray-800 hover:bg-transparent">
-                    <TableHead className="text-gray-400">Client</TableHead>
-                    <TableHead className="text-gray-400">Progress</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
-                    <TableHead className="text-gray-400">Last Reminder</TableHead>
-                    <TableHead className="text-right text-gray-400">Actions</TableHead>
+                  <TableRow className="border-b hover:bg-transparent">
+                    <TableHead>Client</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Reminder</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {forms.map((form) => (
                     <TableRow
                       key={form.id}
-                      className={`cursor-pointer hover:bg-gray-800/50 border-b border-gray-800/50 ${form.is_disabled ? 'opacity-60' : ''}`}
+                      className={`cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b ${form.is_disabled ? 'opacity-60' : ''}`}
                       onClick={() => openForm(form)}
                     >
                       <TableCell>
                         <div>
-                          <div className="font-medium text-white flex items-center">
+                          <div className="font-medium flex items-center">
                             {form.client_name}
                             {form.is_disabled && (
-                              <span className="ml-2 text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">Disabled</span>
+                              <span className="ml-2 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded">Disabled</span>
                             )}
                             {form.password && (
-                              <span className="ml-2 text-xs bg-amber-900/30 text-amber-400 px-2 py-0.5 rounded">Password Protected</span>
+                              <span className="ml-2 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded">Password Protected</span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-gray-500">
                             {form.client_email}
                           </div>
                         </div>
@@ -556,7 +485,7 @@ export default function AdminDashboard() {
                                     e.stopPropagation();
                                     copyFormUrl(form);
                                   }}
-                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                  className={getButtonStyle()}
                                 >
                                   <Copy className="w-4 h-4" />
                                 </Button>
@@ -577,7 +506,7 @@ export default function AdminDashboard() {
                                     e.stopPropagation();
                                     sendReminder(form.id);
                                   }}
-                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                  className={getButtonStyle()}
                                 >
                                   <Mail className="w-4 h-4" />
                                 </Button>
@@ -595,7 +524,7 @@ export default function AdminDashboard() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={(e) => handleToggleFormStatus(e, form)}
-                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                  className={getButtonStyle()}
                                 >
                                   {form.is_disabled ? (
                                     <ToggleLeft className="w-4 h-4 text-red-400" />
@@ -617,7 +546,7 @@ export default function AdminDashboard() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={(e) => handleSetFormPassword(e, form)}
-                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                  className={getButtonStyle()}
                                 >
                                   <Lock className="w-4 h-4" />
                                 </Button>
@@ -638,7 +567,7 @@ export default function AdminDashboard() {
                                     e.stopPropagation();
                                     openForm(form);
                                   }}
-                                  className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white border-0"
+                                  className={getButtonStyle()}
                                 >
                                   <ExternalLink className="w-4 h-4" />
                                 </Button>
@@ -656,7 +585,7 @@ export default function AdminDashboard() {
                                   size="icon"
                                   variant="ghost"
                                   onClick={(e) => handleDeleteForm(e, form)}
-                                  className="h-8 w-8 bg-white/10 hover:bg-red-900/20 text-white hover:text-red-400 border-0"
+                                  className={`${getButtonStyle()} hover:text-red-400`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -760,6 +689,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 }

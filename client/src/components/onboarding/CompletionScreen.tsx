@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, ThumbsUp, ArrowRight, Building, Globe, Phone, Mail, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import confetti from 'canvas-confetti';
+import { useTheme } from '@/lib/theme-context';
 
 interface CompletionScreenProps {
   clientName: string;
@@ -13,6 +14,7 @@ interface CompletionScreenProps {
 
 export function CompletionScreen({ clientName, formData, onClose, isAdmin }: CompletionScreenProps) {
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     // Trigger confetti when component mounts
@@ -95,7 +97,11 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="max-w-3xl mx-auto px-6 py-12 rounded-2xl bg-[#0d1116] backdrop-blur-lg border border-gray-800/50 shadow-2xl"
+        className={`max-w-3xl mx-auto px-6 py-12 pb-24 rounded-2xl ${
+          theme === 'dark' 
+            ? 'bg-[#0d1116] border-gray-800/50' 
+            : 'bg-white border-gray-200/70'
+        } backdrop-blur-lg border shadow-2xl`}
       >
         <div className="text-center mb-8">
           <motion.div
@@ -111,7 +117,7 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-4xl font-bold text-white mb-4"
+            className={`text-4xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}
           >
             Congratulations{clientName && <span>, {clientName}</span>}!
           </motion.h1>
@@ -120,7 +126,7 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-xl text-gray-300 mb-8"
+            className={`text-xl ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-8`}
           >
             You've successfully completed the onboarding process.
           </motion.p>
@@ -132,9 +138,13 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.5 }}
-            className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 mb-8"
+            className={`${
+              theme === 'dark' 
+                ? 'bg-gray-800/50 border-gray-700/50' 
+                : 'bg-gray-50 border-gray-200/70'
+            } border rounded-xl p-6 mb-8`}
           >
-            <h3 className="text-xl font-semibold text-white mb-4">Your Information Summary</h3>
+            <h3 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Your Information Summary</h3>
             
             <div className="grid md:grid-cols-2 gap-6">
               {/* Business Details */}
@@ -146,23 +156,23 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
                   </h4>
                   <ul className="space-y-2">
                     {businessDetails.name && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Company:</span> {businessDetails.name}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Company:</span> {businessDetails.name}
                       </li>
                     )}
                     {businessDetails.type && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Type:</span> {businessDetails.type}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Type:</span> {businessDetails.type}
                       </li>
                     )}
                     {businessDetails.website && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Website:</span> {businessDetails.website}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Website:</span> {businessDetails.website}
                       </li>
                     )}
                     {businessDetails.location && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Location:</span> {businessDetails.location}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Location:</span> {businessDetails.location}
                       </li>
                     )}
                   </ul>
@@ -178,18 +188,18 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
                   </h4>
                   <ul className="space-y-2">
                     {campaign.campaignName && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Campaign:</span> {campaign.campaignName}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Campaign:</span> {campaign.campaignName}
                       </li>
                     )}
                     {campaign.objective && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Objective:</span> {campaign.objective}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Objective:</span> {campaign.objective}
                       </li>
                     )}
                     {campaign.keyMessages && (
-                      <li className="text-gray-300">
-                        <span className="text-gray-500">Key Messages:</span> {campaign.keyMessages}
+                      <li className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>Key Messages:</span> {campaign.keyMessages}
                       </li>
                     )}
                   </ul>
@@ -203,17 +213,21 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.5 }}
-          className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 mb-8"
+          className={`${
+            theme === 'dark' 
+              ? 'bg-gray-800/50 border-gray-700/50' 
+              : 'bg-gray-50 border-gray-200/70'
+          } border rounded-xl p-6 mb-8`}
         >
           <div className="flex items-start gap-4">
             <ThumbsUp className="w-10 h-10 text-emerald-400 flex-shrink-0 mt-1" />
             <div>
-              <h3 className="text-xl font-semibold text-white mb-2">What happens next?</h3>
-              <p className="text-gray-400 mb-4">
+              <h3 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-2`}>What happens next?</h3>
+              <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
                 Our team will review your information and start working on your campaign right away. 
                 You'll receive an email confirmation shortly with next steps.
               </p>
-              <p className="text-gray-400">
+              <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 If you have any questions or need to make changes, please contact your account manager.
               </p>
             </div>
@@ -224,7 +238,7 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
-          className="text-center"
+          className="text-center mt-8 mb-6"
         >
           {isAdmin && onClose && (
             <Button 
@@ -232,6 +246,15 @@ export function CompletionScreen({ clientName, formData, onClose, isAdmin }: Com
               className="px-8 py-6 text-lg bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-emerald-500/20"
             >
               Return to Dashboard
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          )}
+          {!isAdmin && (
+            <Button 
+              onClick={onClose}
+              className="px-8 py-6 text-lg bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-emerald-500/20"
+            >
+              Continue
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           )}

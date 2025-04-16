@@ -368,11 +368,17 @@ const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+  const { state } = useSidebar()
+
   return (
     <div
+      data-sidebar-footer=""
+      data-state={state}
+      className={cn(
+        "mt-auto px-4 py-4 border-t border-sidebar-border flex items-center justify-between",
+        className
+      )}
       ref={ref}
-      data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
     />
   )

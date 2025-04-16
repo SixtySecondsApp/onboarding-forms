@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { generateUniqueSlug } from "@/lib/utils";
+import { OnboardingThemeToggle } from "@/components/onboarding/ThemeToggle";
 
 export default function OnboardingPage() {
   const { id } = useParams();
@@ -75,23 +76,25 @@ export default function OnboardingPage() {
       try {
         console.log("Fetching form data for ID/slug:", id);
         
-        // Try to get the form by ID first
-        try {
-          const data = await getFormData(id);
-          console.log("Form data found by ID:", data);
-          return data;
-        } catch (idError) {
-          console.log("Form not found by ID, trying slug...");
-          
-          // If that fails, try to get it by slug
+        // For slugs or IDs that look like slugs, try getFormBySlug first
+        if (id.includes('-') && id.length < 36) {
           try {
             const data = await getFormBySlug(id);
             console.log("Form data found by slug:", data);
             return data;
           } catch (slugError) {
-            console.error("Form not found by slug either:", slugError);
-            throw new Error("Form not found by ID or slug");
+            console.log("Not found by slug, trying as regular ID...");
           }
+        }
+        
+        // Then try as a regular ID
+        try {
+          const data = await getFormData(id);
+          console.log("Form data found by ID:", data);
+          return data;
+        } catch (idError) {
+          console.error("Form not found by ID either:", idError);
+          throw new Error("Form not found by ID or slug");
         }
       } catch (err) {
         console.error("Error fetching form:", err);
@@ -105,6 +108,7 @@ export default function OnboardingPage() {
   if (isLoading || createFormMutation.isPending) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <OnboardingThemeToggle />
         <div className="text-white">
           {createFormMutation.isPending ? "Creating form..." : "Loading..."}
         </div>
@@ -116,6 +120,7 @@ export default function OnboardingPage() {
     console.error("Error or no form:", error);
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <OnboardingThemeToggle />
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
@@ -155,5 +160,10 @@ export default function OnboardingPage() {
     );
   }
 
-  return <OnboardingForm formId={form.id} />;
+  return (
+    <>
+      <OnboardingThemeToggle />
+      <OnboardingForm formId={form.id} />
+    </>
+  );
 }

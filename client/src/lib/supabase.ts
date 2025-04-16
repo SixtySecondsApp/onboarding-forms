@@ -147,7 +147,20 @@ export const getFormData = async (formId: string) => {
   try {
     console.log("getFormData called with ID:", formId);
     
-    // First, try to get the form without using .single()
+    // Check if the ID looks like a slug (contains hyphens but not in UUID format)
+    const isSlugLike = formId.includes('-') && !isValidUUID(formId);
+    
+    if (isSlugLike) {
+      // If it looks like a slug, try to get by slug first
+      try {
+        return await getFormBySlug(formId);
+      } catch (slugError) {
+        console.log("Couldn't find by slug, trying as ID anyway");
+        // Fall through to try as regular ID
+      }
+    }
+    
+    // Try to get the form as a regular ID
     const { data, error } = await supabase
       .from('forms')
       .select('*')
@@ -171,6 +184,12 @@ export const getFormData = async (formId: string) => {
     throw error;
   }
 };
+
+// Helper function to check if a string is a valid UUID
+function isValidUUID(str: string) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
 
 // Helper function to create a form section
 export const createFormSection = async (sectionData: any) => {

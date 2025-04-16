@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, Calendar, Users, UserPlus, MessageSquare, FileImport, Plus, FormInput } from 'lucide-react';
+import { Check, Palette, Building2, Type, Settings, Share, Globe, Phone, Linkedin, MapPin, Target, ChevronRight, AlertCircle, Info, CheckCircle2, ChevronLeft, Upload, Calendar, Users, UserPlus, MessageSquare, FileUp, Plus, FormInput, X } from 'lucide-react';
 import { ProgressTracker, type Step } from './ProgressTracker';
 import { WelcomeScreen } from './WelcomeScreen';
 import { CompletionScreen } from './CompletionScreen';
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getFormData, updateFormData, getSectionData, updateSectionData } from '@/lib/supabase';
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/lib/theme-context";
 
 // ShareSection Component
 interface ShareSectionProps {
@@ -20,6 +21,7 @@ interface ShareSectionProps {
 
 const ShareSection = ({ formId, section }: ShareSectionProps) => {
   const { toast } = useToast();
+  const { theme } = useTheme(); // Add theme context
 
   const handleShare = async () => {
     try {
@@ -84,7 +86,11 @@ const ShareSection = ({ formId, section }: ShareSectionProps) => {
         handleShare();
       }}
       type="button" // Explicitly set button type to prevent form submission
-      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-emerald-400 transition-colors"
+      className={`flex items-center gap-2 px-3 py-2 text-sm
+        ${theme === 'dark' 
+          ? 'text-gray-400 hover:text-emerald-400' 
+          : 'text-gray-600 hover:text-emerald-600'} 
+        transition-colors`}
     >
       <Share className="w-4 h-4" />
       Share
@@ -145,48 +151,62 @@ const FormField = ({
 }) => {
   const { label, name, icon: Icon, placeholder, type = 'text', options = null, hint = null } = field;
   const hasError = touched[name] && errors[name];
-  // A field is only valid if:
-  // 1. It has been touched
-  // 2. Has no errors
-  // 3. Has a value
-  // 4. For text fields, the value is not just whitespace
   const isValid = touched[name] && !errors[name] && value && (type === 'select' ? true : value.trim() !== '');
   const inputId = `field-${name}`;
+  const { theme } = useTheme(); // Add theme context
+
+  const lightModeClasses = hasError 
+    ? 'border-red-400 focus-within:border-red-400 focus-within:ring-red-400'
+    : isValid
+      ? 'border-emerald-500/50 shadow-sm shadow-emerald-500/10'
+      : 'border-gray-300';
+
+  const darkModeClasses = hasError
+    ? 'border-red-400 focus-within:border-red-400 focus-within:ring-red-400'
+    : isValid
+      ? 'border-emerald-500/50 shadow-sm shadow-emerald-500/10'
+      : 'border-gray-700';
+
+  const iconContainerClasses = hasError
+    ? theme === 'dark' ? 'bg-red-900/20' : 'bg-red-100'
+    : isValid
+      ? theme === 'dark' ? 'bg-emerald-900/20' : 'bg-emerald-100'
+      : theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100';
+
+  const iconClasses = hasError
+    ? 'text-red-400'
+    : isValid
+      ? 'text-emerald-500'
+      : theme === 'dark'
+        ? 'text-gray-500 group-hover:text-emerald-400'
+        : 'text-gray-600 group-hover:text-emerald-600';
 
   return (
     <div className="group">
-      <label htmlFor={inputId} className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
+      <label htmlFor={inputId} className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2 flex items-center justify-between`}>
         <span className="flex items-center">
           {label}
           {hint && !hasError && (
-            <span className="ml-2 text-gray-500 cursor-help group-hover:text-gray-400 transition-colors" title={hint}>
+            <span className={`ml-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} cursor-help group-hover:text-gray-400 transition-colors`} title={hint}>
               <Info className="w-3.5 h-3.5" />
             </span>
           )}
         </span>
         {hasError && (
-          <span className="text-red-400 text-xs flex items-center animate-fadeIn">
+          <span className="text-red-500 text-xs flex items-center animate-fadeIn">
             <AlertCircle className="w-3 h-3 mr-1" />
             {errors[name]}
           </span>
         )}
       </label>
-      <div className={`relative border rounded-lg overflow-hidden bg-gray-800/50 group hover:border-gray-600 transition-all duration-200 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:border-emerald-500 
-        ${hasError
-          ? 'border-red-400 focus-within:border-red-400 focus-within:ring-red-400'
-          : isValid
-            ? 'border-emerald-500/50 shadow-sm shadow-emerald-500/10'
-            : 'border-gray-700'
-        }`}
+      <div className={`relative border rounded-lg overflow-hidden ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-white'} group ${theme === 'dark' ? 'hover:border-gray-600' : 'hover:border-gray-400'} transition-all duration-200 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:border-emerald-500 
+        ${theme === 'dark' ? darkModeClasses : lightModeClasses}`}
       >
         <div
           aria-hidden="true"
-          className={`absolute top-0 bottom-0 left-0 w-16 flex items-center justify-center bg-gray-700/50 border-r border-gray-700 rounded-l-lg transition-colors duration-200 
-          ${hasError ? 'bg-red-900/20' : isValid ? 'bg-emerald-900/20' : ''}`}
+          className={`absolute top-0 bottom-0 left-0 w-16 flex items-center justify-center ${iconContainerClasses} border-r ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} rounded-l-lg transition-colors duration-200`}
         >
-          <Icon className={`w-4 h-4 ${
-            hasError ? 'text-red-400' : isValid ? 'text-emerald-400' : 'text-gray-500 group-hover:text-emerald-400'
-          } transition-colors duration-200`} />
+          <Icon className={`w-4 h-4 ${iconClasses} transition-colors duration-200`} />
         </div>
 
         {type === 'select' ? (
@@ -196,14 +216,16 @@ const FormField = ({
             value={value}
             onChange={onChange}
             onBlur={onBlur}
-            className="w-full h-full py-3 pl-20 pr-10 bg-transparent text-gray-200 appearance-none focus:outline-none transition-all duration-200"
+            className={`w-full h-full py-3 pl-20 pr-10 bg-transparent ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'} appearance-none focus:outline-none transition-all duration-200`}
             aria-invalid={hasError ? "true" : "false"}
-            aria-describedby={hasError ? `${name}-error` : undefined}
-            autoFocus={autoFocus}
           >
-            <option value="" disabled>{placeholder}</option>
-            {options && options.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </select>
         ) : (
@@ -214,51 +236,13 @@ const FormField = ({
             value={value}
             onChange={onChange}
             onBlur={onBlur}
-            className="w-full bg-transparent text-gray-200 pl-20 pr-4 py-3 focus:outline-none"
             placeholder={placeholder}
+            className={`w-full h-full py-3 pl-20 pr-4 bg-transparent ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'} focus:outline-none transition-all duration-200 placeholder:${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
             aria-invalid={hasError ? "true" : "false"}
-            aria-describedby={hasError ? `${name}-error` : undefined}
-            autoComplete={name === 'name' ? 'organization' : name === 'website' ? 'url' : name === 'phone' ? 'tel' : name === 'location' ? 'address-level2' : 'off'}
             autoFocus={autoFocus}
           />
         )}
-
-        {isValid && !hasError && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 15 }}
-            >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            </motion.div>
-          </div>
-        )}
-
-        {type === 'select' && (
-          <div className={`absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none ${
-            hasError ? 'text-red-400' : 'text-gray-500 group-hover:text-emerald-400'
-          } transition-colors duration-200`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </div>
-        )}
       </div>
-
-      {name === 'website' && !hasError && (
-        <p id="website-hint" className="mt-1 text-xs text-gray-500 flex items-center">
-          <Info className="w-3 h-3 mr-1 text-gray-500" />
-          Include https:// for external links
-        </p>
-      )}
-      {name === 'phone' && !hasError && (
-        <p id="phone-hint" className="mt-1 text-xs text-gray-500 flex items-center">
-          <Info className="w-3 h-3 mr-1 text-gray-500" />
-          Enter your phone number with country code (e.g., +44 for UK)
-        </p>
-      )}
-      {hasError && <p id={`${name}-error`} className="sr-only">{errors[name]}</p>}
     </div>
   );
 };
@@ -314,69 +298,86 @@ const validateField = (name: keyof BusinessDetails | "successCriteria" | "object
 
 // Update the FormSection component
 const FormSection = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
   return (
-    <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-emerald-900/10 hover:border-gray-600/50 transition-all duration-300 backdrop-blur-sm">
+    <div className={`${theme === 'dark' ? 'bg-gray-900/70' : 'bg-white'} w-full rounded-lg p-6 shadow-lg ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} border-l-4 border-l-emerald-500 mt-2 mb-8 relative z-10`}>
       {children}
     </div>
   );
 };
 
-const Input = ({ id, type = "text", placeholder, className, value, onChange }: { id: string; type?: string; placeholder: string; className: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
-  <input
-    type={type}
-    id={id}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className={`${className} bg-gray-800/50 border border-gray-700 text-gray-200 p-3 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
-  />
-)
+const Input = ({ id, type = "text", placeholder, className, value, onChange }: { id: string; type?: string; placeholder: string; className: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
+  const { theme } = useTheme();
+  return (
+    <input
+      type={type}
+      id={id}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className={`${className} ${
+        theme === 'dark'
+          ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+          : 'bg-white border-gray-300 text-gray-800'
+      } border p-3 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
+    />
+  );
+}
 
 // Add these constants outside of any component
-const SYSTEM_INTEGRATION_OPTIONS = [
-  {
-    id: "salesforce",
-    name: "Salesforce",
-    description: "Connect your Salesforce CRM",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg",
-  },
-  {
-    id: "pipedrive",
-    name: "Pipedrive",
-    description: "Connect your Pipedrive CRM",
-    logo: "https://seeklogo.com/images/P/pipedrive-logo-5B941D1045-seeklogo.com.png",
-  },
-  {
-    id: "hubspot",
-    name: "HubSpot",
-    description: "Connect your HubSpot CRM",
-    logo: "https://www.hubspot.com/hubfs/assets/hubspot.com/style-guide/brand-guidelines/guidelines_the-logo.svg",
-  },
-  {
-    id: "savvycal",
-    name: "SavvyCal",
-    description: "Connect your SavvyCal calendar",
-    logo: "https://assets-global.website-files.com/61c0a8113e6c0db0dcecbae0/61c0a8113e6c0d5f6cecbaf2_savvycal-logo.svg",
-  },
-  {
-    id: "slack",
-    name: "Slack",
-    description: "Connect your Slack workspace",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/2048px-Slack_icon_2019.svg.png",
-  },
-  {
-    id: "teams",
-    name: "Microsoft Teams",
-    description: "Connect your Microsoft Teams",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Microsoft_Office_Teams_%282018%E2%80%93present%29.svg/2203px-Microsoft_Office_Teams_%282018%E2%80%93present%29.svg.png",
-  },
-];
+const SYSTEM_INTEGRATION_OPTIONS = {
+  crm: [
+    {
+      value: "salesforce",
+      label: "Salesforce",
+      icon: <Building2 className="w-4 h-4" />,
+    },
+    {
+      value: "pipedrive",
+      label: "Pipedrive",
+      icon: <Building2 className="w-4 h-4" />,
+    },
+    {
+      value: "hubspot",
+      label: "HubSpot",
+      icon: <Building2 className="w-4 h-4" />,
+    },
+    {
+      value: "other",
+      label: "Other CRM",
+      icon: <Plus className="w-4 h-4" />,
+    },
+  ],
+  scheduling: [
+    {
+      value: "calendly",
+      label: "Calendly",
+      icon: <Calendar className="w-4 h-4" />,
+    },
+    {
+      value: "savvycal",
+      label: "SavvyCal",
+      icon: <Calendar className="w-4 h-4" />,
+    },
+    {
+      value: "microsoft",
+      label: "Microsoft",
+      icon: <Calendar className="w-4 h-4" />,
+    },
+    {
+      value: "other",
+      label: "Other Tool",
+      icon: <Plus className="w-4 h-4" />,
+    },
+  ],
+};
 
-// Update the ProgressPie component to use emerald color
+// Update the ProgressPie component to use emerald color with theme awareness
 const ProgressPie = ({ progress }: { progress: number }) => {
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const { theme } = useTheme();
 
   return (
     <div className="relative w-20 h-20 flex items-center justify-center">
@@ -386,7 +387,7 @@ const ProgressPie = ({ progress }: { progress: number }) => {
           cx="40"
           cy="40"
           r={radius}
-          stroke="rgba(255,255,255,0.1)"
+          stroke={theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
           strokeWidth="8"
           fill="none"
         />
@@ -395,7 +396,7 @@ const ProgressPie = ({ progress }: { progress: number }) => {
           cx="40"
           cy="40"
           r={radius}
-          stroke="rgba(16, 185, 129, 0.8)" // Changed to emerald color
+          stroke="rgba(16, 185, 129, 0.8)" // Emerald color works well in both themes
           strokeWidth="8"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -405,13 +406,14 @@ const ProgressPie = ({ progress }: { progress: number }) => {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-semibold text-emerald-400">{Math.round(progress)}%</span>
+        <span className="text-lg font-semibold text-emerald-500">{Math.round(progress)}%</span>
       </div>
     </div>
   );
 };
 
 export function OnboardingForm({ formId, sectionId }: Props) {
+  const { theme } = useTheme();
   const { data: form } = useQuery<FormType>({
     queryKey: ["/api/forms", formId],
     queryFn: async () => {
@@ -467,13 +469,15 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formProgress, setFormProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
   // Added state for brand assets
   const [brandAssets, setBrandAssets] = useState({
     brandName: '',
     mainColor: '#000000',
     secondaryColor: '#000000',
-    highlightColor: '#000000'
+    highlightColor: '#000000',
+    additionalAssets: ''
   });
 
   // Added state for file upload
@@ -498,9 +502,40 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   // Added state for selected industries and other industry input
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [otherIndustry, setOtherIndustry] = useState('');
+  const [showOtherIndustryInput, setShowOtherIndustryInput] = useState(false);
 
   // Add new state for selected company sizes
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
+
+  // Define industry and company size options
+  const industryOptions = [
+    'Technology',
+    'Finance',
+    'Healthcare',
+    'Education',
+    'Manufacturing',
+    'Retail',
+    'Professional Services',
+    'Marketing & Advertising',
+    'Media & Entertainment',
+    'Real Estate',
+    'Construction',
+    'Transportation',
+    'Hospitality',
+    'Non-profit',
+    'Government'
+  ];
+
+  const companySizeOptions = [
+    '1-10 employees',
+    '11-50 employees',
+    '51-200 employees',
+    '201-500 employees',
+    '501-1,000 employees',
+    '1,001-5,000 employees',
+    '5,001-10,000 employees',
+    '10,000+ employees'
+  ];
 
   // Animation variants for consistent animations
   const fadeInUp = {
@@ -692,7 +727,10 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         { value: '11-50', label: '11-50 employees' },
         { value: '51-200', label: '51-200 employees' },
         { value: '201-500', label: '201-500 employees' },
-        { value: '500+', label: '500+ employees' }
+        { value: '501-1,000', label: '501-1,000 employees' },
+        { value: '1,001-5,000', label: '1,001-5,000 employees' },
+        { value: '5,001-10,000', label: '5,001-10,000 employees' },
+        { value: '10,000+', label: '10,000+ employees' }
       ]
     }
   ];
@@ -717,32 +755,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Update the progress calculation and update functions
   const calculateProgress = () => {
-    // Calculate progress based on completed steps and current step
+    // Calculate progress based on completed steps
     if (steps.length === 0) return 0;
     
     // Base progress from completed steps
     const completedProgress = (completedSteps.length / steps.length) * 100;
     
-    // Add partial progress for current step if it's not already completed
-    if (!completedSteps.includes(currentStep)) {
-      // Calculate how far along the user is in the current step
-      // This gives a sense of progress even within a step
-      const stepProgress = (1 / steps.length) * 50; // 50% of a step's worth
-      
-      // If we're on the last step, make it feel closer to completion
-      if (currentStep === steps.length - 1) {
-        return Math.min(Math.round(completedProgress + stepProgress + 25), 99); // Cap at 99% until actually complete
-      }
-      
-      return Math.round(completedProgress + stepProgress);
-    }
-    
     // If all steps are completed, return 100%
-    if (completedSteps.length === steps.length) {
+    if (completedSteps.length >= steps.length) {
       return 100;
     }
     
-    return Math.round(completedProgress);
+    // Ensure minimum progress of 8%
+    return Math.max(Math.round(completedProgress), 8);
   };
 
   // Add an effect to update progress when form data changes
@@ -765,7 +790,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     };
 
     updateProgress();
-  }, [businessDetails, campaign, audience, typography, errors]);
+  }, [businessDetails, campaign, audience, typography, completedSteps, formProgress, formId]);
 
   // Load business details from form data
   useEffect(() => {
@@ -812,12 +837,37 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     }
   }, [form, section, sectionId]);
 
+  const getStepStatus = (stepId: number): Step['status'] => {
+    if (completedSteps.includes(stepId)) {
+      return 'completed';
+    }
+    if (stepId === currentStep) {
+      return 'current';
+    }
+    return 'upcoming';
+  };
+
+  // Update steps with current status using useMemo
+  const steps = useMemo(() => [
+    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
+    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
+    { id: 3, title: 'Target Audience', icon: Users, status: getStepStatus(2) },
+    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
+    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
+    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
+  ], [completedSteps, currentStep]);
+
   // Load completed steps from form data when component mounts
   useEffect(() => {
     if (form?.data?.completedSteps) {
-      setCompletedSteps(form.data.completedSteps);
+      const loadedSteps = form.data.completedSteps;
+      setCompletedSteps(loadedSteps);
+      
+      // Recalculate progress immediately
+      const newProgress = Math.round((loadedSteps.length / steps.length) * 100);
+      setFormProgress(Math.max(newProgress, 8)); // Ensure minimum 8% progress
     }
-  }, [form]);
+  }, [form, steps.length]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -1008,24 +1058,35 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     if (animatingNav) return;
     setAnimatingNav(true);
 
-    // Save current form data without changing completion status
+    // Determine the potential next completed steps before saving
+    const updatedCompletedSteps = direction === 'next' && !completedSteps.includes(currentStep)
+      ? [...completedSteps, currentStep]
+      : completedSteps;
+
+    // Save current form data, including the potentially updated completed steps
     try {
       await supabase
         .from('forms')
-        .update({ 
+        .update({
           data: {
             ...form?.data,
             businessDetails,
             campaign,
             audience,
             typography,
-            completedSteps // Keep the existing completed steps
+            completedSteps: updatedCompletedSteps // Save updated steps
           }
         })
         .eq('id', formId);
 
       // Invalidate the forms query to update the dashboard
       queryClient.invalidateQueries({ queryKey: ["forms"] });
+
+      // Update local state if moving next
+      if (direction === 'next') {
+        setCompletedSteps(updatedCompletedSteps);
+      }
+
     } catch (error) {
       console.error('Error saving form data:', error);
       toast({
@@ -1033,15 +1094,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         description: "Failed to save form data",
         variant: "destructive"
       });
+      // Don't proceed with navigation if save failed
+      setAnimatingNav(false);
+      return;
     }
 
     if (direction === 'next') {
-      // Check if all sections are completed after adding the current step
-      const updatedCompletedSteps = completedSteps.includes(currentStep) 
-        ? completedSteps 
-        : [...completedSteps, currentStep];
-      
-      // If all steps are completed, show completion screen
+      // If all steps are now completed, show completion screen
       if (updatedCompletedSteps.length >= steps.length) {
         // Update form status to completed
         await supabase
@@ -1058,7 +1117,7 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         return;
       }
       
-      // Find the next uncompleted step
+      // Find the next uncompleted step using the *updated* list
       let nextStep = currentStep + 1;
       while (nextStep < steps.length && updatedCompletedSteps.includes(nextStep)) {
         nextStep++;
@@ -1151,15 +1210,16 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       await updateFormMutation.mutateAsync(formData);
 
       // Mark the current step as completed
-      setCompletedSteps(prev => {
-        if (!prev.includes(currentStep)) {
-          return [...prev, currentStep];
-        }
-        return prev;
-      });
+      const updatedCompletedSteps = [...completedSteps];
+      if (!updatedCompletedSteps.includes(currentStep)) {
+        updatedCompletedSteps.push(currentStep);
+      }
+      
+      // Update the state with the new completed steps
+      setCompletedSteps(updatedCompletedSteps);
 
       // Calculate the actual progress based on completed steps
-      const newProgress = Math.round((completedSteps.length + 1) / steps.length * 100);
+      const newProgress = Math.round((updatedCompletedSteps.length / steps.length) * 100);
 
       // Update form progress in Supabase
       await supabase
@@ -1172,18 +1232,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
             campaign,
             audience,
             typography,
-            completedSteps: [...completedSteps, currentStep]
+            completedSteps: updatedCompletedSteps
           }
         })
         .eq('id', formId);
 
       // Invalidate the forms query to update the dashboard
       queryClient.invalidateQueries({ queryKey: ["forms"] });
-
-      // Add the current step to completed steps if not already included
-      const updatedCompletedSteps = completedSteps.includes(currentStep)
-        ? completedSteps
-        : [...completedSteps, currentStep];
 
       // Check if all sections are now completed
       const allSectionsCompleted = updatedCompletedSteps.length >= steps.length || 
@@ -1226,79 +1281,14 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   };
 
 const renderFormActions = () => {
-    const isLastSection = currentStep === steps.length - 1;
-    
-    return (
-      <div className="flex justify-between items-center mt-8">
-        <div className="flex space-x-3">
-          {currentStep > 0 && (
-            <button
-              onClick={() => handleStepNavigation('previous')}
-              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
-              disabled={animatingNav}
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </button>
-          )}
-          {currentStep < steps.length - 1 && (
-            <button
-              onClick={() => handleStepNavigation('next')}
-              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-all duration-200 flex items-center transform hover:scale-105"
-              disabled={animatingNav}
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </button>
-          )}
-        </div>
-        <button
-          onClick={handleComplete}
-          className={`px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg text-white font-medium transition-all duration-200 flex items-center shadow-md hover:shadow-lg hover:shadow-emerald-700/20 transform hover:scale-105 ${
-            isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
-              Saving...
-            </>
-          ) : (
-            <>
-              {isLastSection ? 'Complete Form' : 'Complete Section'}
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </>
-          )}
-        </button>
-      </div>
-    );
+    // We're removing this function's content since we'll only use the bottom navigation bar
+    return null; // Return null instead of rendering duplicate navigation buttons
   };
 
   const handleShareSection = (e: React.MouseEvent, sectionTitle: string) => {
     e.stopPropagation();
     // Share functionality is handled by the ShareSection component
   };
-
-  // Add a state to track completed steps
-  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-
-  const getStepStatus = (stepId: number): Step['status'] => {
-    if (completedSteps.includes(stepId)) return 'completed';
-    if (stepId === currentStep) return 'current';
-    return 'upcoming';
-  };
-
-  // Update steps with current status
-  const steps: Step[] = [
-    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
-    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
-    { id: 3, title: 'Target Audience', icon: Users, status: getStepStatus(2) },
-    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
-    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
-    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
-  ];
-
 
   const hasFormErrors = () => {
     return Object.values(errors).some(error => error !== '');
@@ -1315,87 +1305,59 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-business-details">Business Details</h2>
-            <p className="text-gray-400 mt-1">Tell us about your business</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-business-details">Business Details</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Tell us about your business</p>
           </div>
           <ShareSection formId={formId} section="Business Details" />
         </div>
 
         <FormSection>
-          {/* Primary Business Information */}
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Business Identity */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white mb-4">Business Identity</h3>
-                <FormField
-                  key="name"
-                  field={formFields[0]} // Business Name
-                  value={businessDetails.name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                  autoFocus={true}
-                />
-                <FormField
-                  key="type"
-                  field={formFields[1]} // Business Type
-                  value={businessDetails.type}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-              </div>
-
-              {/* Location & Contact */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white mb-4">Location & Contact</h3>
-                <FormField
-                  key="location"
-                  field={formFields[5]} // Location
-                  value={businessDetails.location}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-                <FormField
-                  key="phone"
-                  field={formFields[4]} // Phone Number
-                  value={businessDetails.phone}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Business Identity */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Business Identity</h3>
+              <FormField
+                key="name"
+                field={formFields[0]} // Business Name
+                value={businessDetails.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
+                autoFocus={true}
+              />
+              <FormField
+                key="type"
+                field={formFields[1]} // Business Type
+                value={businessDetails.type}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
+              />
             </div>
 
-            {/* Online Presence - Full Width Section */}
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold text-white mb-4">Online Presence</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  key="website"
-                  field={formFields[2]} // Website
-                  value={businessDetails.website}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-                <FormField
-                  key="linkedin"
-                  field={formFields[3]} // LinkedIn
-                  value={businessDetails.linkedin}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-              </div>
+            {/* Location & Contact */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Location & Contact</h3>
+              <FormField
+                key="location"
+                field={formFields[5]} // Location
+                value={businessDetails.location}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
+              />
+              <FormField
+                key="phone"
+                field={formFields[4]} // Phone Number
+                value={businessDetails.phone}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
+              />
             </div>
           </div>
         </FormSection>
@@ -1412,61 +1374,76 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-brand-assets">Brand Assets</h2>
-            <p className="text-gray-400 mt-1">Define your brand's visual identity</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-brand-assets">Brand Assets</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Upload your brand logo and select your brand colors</p>
           </div>
           <ShareSection formId={formId} section="Brand Assets" />
         </div>
 
         <FormSection>
           <div className="space-y-8">
-            {/* Brand Logo */}
+            {/* Logo Upload */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-white">Brand Logo</h3>
-                <p className="text-sm text-gray-400 mt-1">Upload your brand logo in high resolution</p>
-            </div>
-              <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 
-                ${logoPreview ? 'border-emerald-500/50 bg-emerald-900/10' : 'border-gray-700 hover:border-emerald-500/50'}`}
-              >
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Logo</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Upload your company logo</p>
+              </div>
+              
+              <div className="mt-4">
                 <input
                   type="file"
-                  accept="image/*"
-                  className="hidden"
                   id="logo-upload"
                   onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="hidden"
                 />
                 <label
                   htmlFor="logo-upload"
-                  className="cursor-pointer flex flex-col items-center justify-center"
+                  className={`block w-full border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    theme === 'dark' 
+                      ? 'border-gray-700 hover:border-gray-600' 
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
                 >
-                  {logoPreview ? (
-                    <div className="space-y-4">
-                      <img src={logoPreview} alt="Logo preview" className="max-h-40 mx-auto" />
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setLogoPreview('');
-                          setLogoFile(null);
-                        }}
-                        className="text-sm text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        Remove logo
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="w-20 h-20 mx-auto rounded-full bg-gray-800/50 flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-gray-500" />
+                  <div
+                    className="cursor-pointer flex flex-col items-center justify-center"
+                  >
+                    {logoPreview ? (
+                      <div className="space-y-4">
+                        <img src={logoPreview} alt="Logo preview" className="max-h-40 mx-auto" />
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLogoPreview('');
+                            setLogoFile(null);
+                          }}
+                          className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Remove logo
+                        </button>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-300">Drop your logo here or click to upload</p>
-                        <p className="text-xs text-gray-500 mt-1">SVG, PNG, or JPG (max. 800x400px)</p>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className={`w-20 h-20 mx-auto rounded-full ${
+                          theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
+                        } flex items-center justify-center`}>
+                          <Upload className={`w-8 h-8 ${
+                            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}>Drop your logo here or click to upload</p>
+                          <p className={`text-xs ${
+                            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                          } mt-1`}>SVG, PNG, or JPG (max. 800x400px)</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </label>
               </div>
             </div>
@@ -1474,13 +1451,13 @@ const renderFormActions = () => {
             {/* Brand Colors */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-white">Brand Colors</h3>
-                <p className="text-sm text-gray-400 mt-1">Choose colors that represent your brand</p>
-          </div>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Colors</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Choose colors that represent your brand</p>
+              </div>
 
               {/* Main Color */}
               <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Main Color</label>
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Main Color</label>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   {brandPresets.mainColor.map(color => (
                     <button
@@ -1494,18 +1471,18 @@ const renderFormActions = () => {
                       }}
                       className={`group relative h-16 rounded-lg transition-all duration-200 ${
                         selectedColors.main === color.value
-                          ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900'
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
                           : ''
                       }`}
                       style={{ 
-                        backgroundColor: color.value === 'custom' ? '#374151' : color.value,
-                        border: color.value === 'custom' ? '2px dashed #4B5563' : 'none'
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
                       }}
                     >
                       <span className="sr-only">{color.name}</span>
                       {color.value === 'custom' && (
-                    <input
-                      type="color"
+                        <input
+                          type="color"
                           value={brandAssets.mainColor}
                           onChange={(e) => {
                             setBrandAssets(prev => ({ ...prev, mainColor: e.target.value }));
@@ -1514,17 +1491,19 @@ const renderFormActions = () => {
                           className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                         />
                       )}
-                      <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-xs text-gray-300 bg-black/50 rounded-b-lg">
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
                         {color.name}
                       </span>
                     </button>
                   ))}
-                    </div>
-                  </div>
+                </div>
+              </div>
 
               {/* Secondary Color */}
               <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Secondary Color</label>
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Secondary Color</label>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   {brandPresets.secondaryColor.map(color => (
                     <button
@@ -1538,12 +1517,12 @@ const renderFormActions = () => {
                       }}
                       className={`group relative h-16 rounded-lg transition-all duration-200 ${
                         selectedColors.secondary === color.value
-                          ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900'
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
                           : ''
                       }`}
                       style={{ 
-                        backgroundColor: color.value === 'custom' ? '#374151' : color.value,
-                        border: color.value === 'custom' ? '2px dashed #4B5563' : 'none'
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
                       }}
                     >
                       <span className="sr-only">{color.name}</span>
@@ -1558,7 +1537,9 @@ const renderFormActions = () => {
                           className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                         />
                       )}
-                      <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-xs text-gray-300 bg-black/50 rounded-b-lg">
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
                         {color.name}
                       </span>
                     </button>
@@ -1568,7 +1549,7 @@ const renderFormActions = () => {
 
               {/* Highlight Color */}
               <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-300">Highlight Color</label>
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Highlight Color</label>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                   {brandPresets.highlightColor.map(color => (
                     <button
@@ -1582,12 +1563,12 @@ const renderFormActions = () => {
                       }}
                       className={`group relative h-16 rounded-lg transition-all duration-200 ${
                         selectedColors.highlight === color.value
-                          ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900'
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
                           : ''
                       }`}
                       style={{ 
-                        backgroundColor: color.value === 'custom' ? '#374151' : color.value,
-                        border: color.value === 'custom' ? '2px dashed #4B5563' : 'none'
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
                       }}
                     >
                       <span className="sr-only">{color.name}</span>
@@ -1602,23 +1583,69 @@ const renderFormActions = () => {
                           className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
                         />
                       )}
-                      <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-xs text-gray-300 bg-black/50 rounded-b-lg">
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
                         {color.name}
                       </span>
                     </button>
                   ))}
                 </div>
+              </div>
             </div>
-          </div>
+
+            {/* Additional Brand Assets */}
+            <div className="space-y-4">
+              <div>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Additional Brand Assets</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Describe any other brand assets or guidelines you'd like us to know about</p>
+              </div>
+              
+              <textarea
+                value={brandAssets.additionalAssets}
+                onChange={(e) => setBrandAssets(prev => ({ ...prev, additionalAssets: e.target.value }))}
+                placeholder="Describe any other brand assets, guidelines, or requirements (e.g., patterns, icons, imagery style, brand voice)"
+                className={`w-full h-32 ${
+                  theme === 'dark'
+                    ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-800'
+                } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
+              />
+            </div>
 
             {/* Brand Preview */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Brand Preview</h3>
-              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6">
+              <div className="flex justify-between items-center">
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Preview</h3>
+                <div className="flex items-center gap-2">
+                  <label className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Background:
+                  </label>
+                  <div className="relative w-6 h-6 rounded overflow-hidden border border-gray-400">
+                    <input
+                      type="color"
+                      value={previewBgColor}
+                      onChange={(e) => setPreviewBgColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="absolute inset-0" style={{ backgroundColor: previewBgColor }}></div>
+                  </div>
+                  <button
+                    onClick={() => setPreviewBgColor('#FFFFFF')}
+                    className={`text-xs px-2 py-1 rounded ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-700'} hover:opacity-80 transition-opacity`}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div 
+                className="border rounded-lg p-6 overflow-hidden transition-colors duration-200"
+                style={{ backgroundColor: previewBgColor }}
+              >
                 <div className="space-y-6">
                   {/* Logo Preview */}
                   {logoPreview && (
-                    <div className="flex justify-center p-4 bg-gray-900/50 rounded-lg">
+                    <div className="flex justify-center p-4 bg-white/50 backdrop-blur-sm rounded-lg">
                       <img src={logoPreview} alt="Brand logo" className="max-h-24" />
                     </div>
                   )}
@@ -1656,7 +1683,7 @@ const renderFormActions = () => {
                     </div>
 
                     {/* Sample UI Elements */}
-                    <div className="p-6 bg-gray-900/50 rounded-lg space-y-4">
+                    <div className="p-6 rounded-lg space-y-4" style={{ backgroundColor: 'rgba(17, 24, 39, 0.7)' }}>
                       <div className="flex items-center justify-between">
                         <h4 className="text-lg font-semibold" style={{ color: brandAssets.mainColor }}>
                           {businessDetails.name || 'Your Brand Name'}
@@ -1758,6 +1785,8 @@ const renderFormActions = () => {
             </div>
           </div>
         </FormSection>
+        {/* Extra bottom padding to prevent overlap with bottom bar */}
+        <div className="pb-16"></div>
       </motion.div>
     );
   };
@@ -1771,10 +1800,10 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-target-audience">Target Audience</h2>
-            <p className="text-gray-400 mt-1">Define who you want to reach with your campaign</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-target-audience">Target Audience</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Define who you want to reach with your campaign</p>
           </div>
           <ShareSection formId={formId} section="Target Audience" />
         </div>
@@ -1783,16 +1812,18 @@ const renderFormActions = () => {
           <div className="space-y-6">
             {/* Job Titles */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white mb-2">Target Job Titles</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-700'} mb-2`}>Target Job Titles</label>
               <textarea
                 name="jobTitles"
                 placeholder="Enter job titles, one per line (e.g., Marketing Manager, CEO, IT Director)"
-                className={`w-full h-32 bg-gray-800/50 border rounded-lg p-3 text-gray-200 focus:outline-none focus:ring-1 ${
+                className={`w-full h-32 ${theme === 'dark' ? 'bg-gray-800/50 text-gray-200' : 'bg-white text-gray-800'} border rounded-lg p-3 focus:outline-none focus:ring-1 ${
                   touched.jobTitles && errors.jobTitles
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : touched.jobTitles && !errors.jobTitles
                     ? 'border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500'
-                    : 'border-gray-700 focus:border-emerald-500 focus:ring-emerald-500'
+                    : theme === 'dark' 
+                      ? 'border-gray-700 focus:border-emerald-500 focus:ring-emerald-500' 
+                      : 'border-gray-300 focus:border-emerald-500 focus:ring-emerald-500'
                 }`}
                 value={audience.jobTitles}
                 onChange={handleAudienceChange}
@@ -1805,84 +1836,97 @@ const renderFormActions = () => {
 
             {/* Target Industries */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white mb-2">Target Industries</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-700'} mb-2`}>Target Industries</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[
-                  'Software & SaaS',
-                  'IT Services & Consulting',
-                  'Financial Services',
-                  'Professional Services',
-                  'Digital Marketing & Advertising',
-                  'Business Services',
-                  'Manufacturing & Industrial',
-                  'Healthcare Technology',
-                  'EdTech & E-Learning',
-                  'Cybersecurity',
-                  'Cloud Services',
-                  'Data Analytics & BI',
-                  'Telecommunications',
-                  'Legal Services',
-                  'Other'
-                ].map(industry => (
+                {industryOptions.map(industry => (
                   <button
                     key={industry}
                     type="button"
                     onClick={() => handleIndustrySelect(industry)}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 ${
                       selectedIndustries.includes(industry)
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? theme === 'dark'
+                          ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                          : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     {industry}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setShowOtherIndustryInput(!showOtherIndustryInput)}
+                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-2 ${
+                    showOtherIndustryInput
+                      ? theme === 'dark'
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  Other Industry
+                </button>
               </div>
-
-              {selectedIndustries.includes('Other') && (
+              {showOtherIndustryInput && (
                 <div className="mt-3">
-                  <input
-                    type="text"
-                    value={otherIndustry}
-                    onChange={handleOtherIndustryChange}
-                    placeholder="Please specify other industries"
-                    className={`w-full bg-gray-800/50 border rounded-lg p-3 text-gray-200 focus:outline-none focus:ring-1 ${
-                      touched.industries && errors.industries
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                        : 'border-gray-700 focus:border-emerald-500 focus:ring-emerald-500'
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={otherIndustry}
+                      onChange={handleOtherIndustryChange}
+                      placeholder="Enter industry name"
+                      className={`flex-1 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700 text-gray-200' : 'bg-white border-gray-300 text-gray-800'} border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
+                    />
+                    <button
+                      onClick={() => {
+                        if (otherIndustry.trim()) {
+                          handleIndustrySelect(otherIndustry);
+                          setOtherIndustry('');
+                        }
+                      }}
+                      disabled={!otherIndustry.trim()}
+                      className={`px-4 py-2 rounded-lg ${
+                        !otherIndustry.trim()
+                          ? 'bg-gray-500/50 text-gray-400 cursor-not-allowed'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      } font-medium transition-all duration-200`}
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
               )}
-              
               {touched.industries && errors.industries && (
                 <p className="text-red-400 text-sm mt-1">{errors.industries}</p>
               )}
             </div>
 
-            {/* Company Size - Updated to use multi-select buttons */}
+            {/* Company Size */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white mb-2">Target Company Sizes</label>
-              <p className="text-sm text-gray-400 mb-3">Select all company sizes you want to target</p>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-700'} mb-2`}>Company Size</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[
-                  { value: '1-10', label: '1-10 employees' },
-                  { value: '11-50', label: '11-50 employees' },
-                  { value: '51-200', label: '51-200 employees' },
-                  { value: '201-500', label: '201-500 employees' },
-                  { value: '500+', label: '500+ employees' }
-                ].map(size => (
+                {companySizeOptions.map(size => (
                   <button
-                    key={size.value}
+                    key={size}
                     type="button"
-                    onClick={() => handleCompanySizeSelect(size.value)}
+                    onClick={() => handleCompanySizeSelect(size)}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 ${
-                      selectedCompanySizes.includes(size.value)
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      selectedCompanySizes.includes(size)
+                        ? theme === 'dark'
+                          ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
+                          : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    {size.label}
+                    {size}
                   </button>
                 ))}
               </div>
@@ -1891,24 +1935,55 @@ const renderFormActions = () => {
               )}
             </div>
 
-            {/* Target Locations - Optional */}
+            {/* Target Locations */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-white mb-2">Target Locations (Optional)</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-700'} mb-2`}>Target Locations</label>
               <textarea
                 name="locations"
-                placeholder="Enter target locations (e.g., North America, Europe, Global)"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                placeholder="Enter locations, one per line (e.g., New York, USA, European Union, Global)"
+                className={`w-full h-32 ${theme === 'dark' ? 'bg-gray-800/50 text-gray-200' : 'bg-white text-gray-800'} border rounded-lg p-3 focus:outline-none focus:ring-1 ${
+                  theme === 'dark' 
+                    ? 'border-gray-700 focus:border-emerald-500 focus:ring-emerald-500' 
+                    : 'border-gray-300 focus:border-emerald-500 focus:ring-emerald-500'
+                }`}
                 value={audience.locations}
                 onChange={handleAudienceChange}
-                onBlur={handleBlur}
               />
             </div>
           </div>
         </FormSection>
+        {/* Extra bottom padding to prevent overlap with bottom bar */}
+        <div className="pb-16"></div>
       </motion.div>
     );
   };
 
+  // Create a reusable TextArea component with proper theme support
+  const TextArea = ({ name, placeholder, value, onChange, onBlur }: { 
+    name: string; 
+    placeholder: string; 
+    value: string; 
+    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
+  }) => {
+    const { theme } = useTheme();
+    return (
+      <textarea
+        name={name}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        className={`w-full h-32 ${
+          theme === 'dark'
+            ? 'bg-gray-800/50 border-gray-700 text-gray-200 placeholder:text-gray-500'
+            : 'bg-white border-gray-300 text-gray-800 placeholder:text-gray-400'
+        } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
+      />
+    );
+  };
+
+  // Update the renderCampaignForm method to use the new TextArea component
   const renderCampaignForm = () => {
     return (
       <motion.div
@@ -1918,26 +1993,26 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-campaign-details">Campaign Details</h2>
-            <p className="text-gray-400 mt-1">Tell us about your marketing campaign</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-campaign">Campaign</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Tell us about your marketing campaign</p>
           </div>
-          <ShareSection formId={formId} section="Campaign Details" />
+          <ShareSection formId={formId} section="Campaign" />
         </div>
 
         <FormSection>
-          <div className="space-y-6">
-            {/* Campaign Identity */}
+          <div className="space-y-8">
+            {/* Campaign Basics */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Campaign Identity</h3>
+              <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Campaign Basics</h3>
               <FormField
                 field={{
                   label: "What would make this campaign successful for you?",
                   name: "successCriteria",
                   icon: Target,
                   placeholder: "Describe what success looks like for this campaign",
-                  hint: "E.g., 'Generate 50 qualified leads' or 'Increase brand awareness by 30%'"
+                  hint: "Be specific about your desired outcomes"
                 }}
                 value={campaign.successCriteria}
                 onChange={(e) => setCampaign(prev => ({ ...prev, successCriteria: e.target.value }))}
@@ -1973,19 +2048,18 @@ const renderFormActions = () => {
 
             {/* Campaign Content */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Campaign Content</h3>
+              <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Campaign Content</h3>
               <div className="space-y-4">
                 <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Key Messages</label>
-            <textarea
-              value={campaign.keyMessages}
+                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Key Messages</label>
+                  <TextArea
+                    name="keyMessages"
+                    value={campaign.keyMessages}
                     onChange={(e) => setCampaign(prev => ({ ...prev, keyMessages: e.target.value }))}
                     onBlur={(e) => handleBlur(e)}
-                    name="keyMessages"
                     placeholder="Enter your key campaign messages (one per line)"
-                    className="w-full h-32 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
+                  />
+                </div>
 
                 <FormField
                   field={{
@@ -1995,7 +2069,7 @@ const renderFormActions = () => {
                     placeholder: "e.g., 'Book a Demo', 'Sign Up Now', 'Learn More'",
                     hint: "What action do you want your audience to take?"
                   }}
-              value={campaign.callToAction}
+                  value={campaign.callToAction}
                   onChange={(e) => setCampaign(prev => ({ ...prev, callToAction: e.target.value }))}
                   onBlur={handleBlur}
                   errors={errors}
@@ -2027,10 +2101,10 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-typography">Typography</h2>
-            <p className="text-gray-400 mt-1">Choose fonts for your brand's visual identity</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-typography">Typography</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Choose fonts for your brand's visual identity</p>
           </div>
           <ShareSection formId={formId} section="Typography" />
         </div>
@@ -2040,8 +2114,8 @@ const renderFormActions = () => {
             {/* Title Font */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-white">Title Font</h3>
-                <p className="text-sm text-gray-400 mt-1">Select a font for main headings and titles</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Title Font</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Select a font for main headings and titles</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {commonFonts.map(font => (
@@ -2051,8 +2125,10 @@ const renderFormActions = () => {
                     onClick={() => handleFontSelect(font.value, 'title')}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 ${
                       selectedFonts.title === font.value
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-500'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <span className={font.value !== 'custom' ? font.value : ''}>{font.label}</span>
@@ -2061,26 +2137,34 @@ const renderFormActions = () => {
               </div>
               {selectedFonts.title === 'custom' && (
                 <div className="mt-3 space-y-2">
-            <input
-              type="text"
+                  <input
+                    type="text"
                     value={typography.customTitleFont}
                     onChange={(e) => setTypography(prev => ({ ...prev, customTitleFont: e.target.value }))}
                     placeholder="Enter custom font name"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className={`w-full ${
+                      theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
                   />
-                  <button className="w-full p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload font file (OTF or TTF)
-            </button>
+                  <button className={`w-full p-3 border rounded-lg ${
+                    theme === 'dark'
+                      ? 'border-gray-700 text-gray-400 hover:bg-gray-700/50'
+                      : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                  } transition-colors flex items-center justify-center gap-2`}>
+                    <Upload className="w-4 h-4" />
+                    Upload font file (OTF or TTF)
+                  </button>
                 </div>
               )}
-          </div>
+            </div>
 
-          {/* Subtitle Font */}
+            {/* Subtitle Font */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-white">Subtitle Font</h3>
-                <p className="text-sm text-gray-400 mt-1">Select a font for subheadings and section titles</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Subtitle Font</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Select a font for subheadings and section titles</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {commonFonts.map(font => (
@@ -2090,8 +2174,10 @@ const renderFormActions = () => {
                     onClick={() => handleFontSelect(font.value, 'subtitle')}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 ${
                       selectedFonts.subtitle === font.value
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-500'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <span className={font.value !== 'custom' ? font.value : ''}>{font.label}</span>
@@ -2100,26 +2186,34 @@ const renderFormActions = () => {
               </div>
               {selectedFonts.subtitle === 'custom' && (
                 <div className="mt-3 space-y-2">
-            <input
-              type="text"
+                  <input
+                    type="text"
                     value={typography.customSubtitleFont}
                     onChange={(e) => setTypography(prev => ({ ...prev, customSubtitleFont: e.target.value }))}
                     placeholder="Enter custom font name"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className={`w-full ${
+                      theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
                   />
-                  <button className="w-full p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload font file (OTF or TTF)
-            </button>
+                  <button className={`w-full p-3 border rounded-lg ${
+                    theme === 'dark'
+                      ? 'border-gray-700 text-gray-400 hover:bg-gray-700/50'
+                      : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                  } transition-colors flex items-center justify-center gap-2`}>
+                    <Upload className="w-4 h-4" />
+                    Upload font file (OTF or TTF)
+                  </button>
                 </div>
               )}
-          </div>
+            </div>
 
             {/* Body Font */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-white">Body Font</h3>
-                <p className="text-sm text-gray-400 mt-1">Select a font for main text content</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Body Font</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Select a font for main text content</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {commonFonts.map(font => (
@@ -2129,8 +2223,10 @@ const renderFormActions = () => {
                     onClick={() => handleFontSelect(font.value, 'body')}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 ${
                       selectedFonts.body === font.value
-                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-500'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <span className={font.value !== 'custom' ? font.value : ''}>{font.label}</span>
@@ -2139,41 +2235,32 @@ const renderFormActions = () => {
               </div>
               {selectedFonts.body === 'custom' && (
                 <div className="mt-3 space-y-2">
-            <input
-              type="text"
+                  <input
+                    type="text"
                     value={typography.customBodyFont}
                     onChange={(e) => setTypography(prev => ({ ...prev, customBodyFont: e.target.value }))}
                     placeholder="Enter custom font name"
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className={`w-full ${
+                      theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
                   />
-                  <button className="w-full p-3 border border-gray-700 rounded-lg text-gray-400 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload font file (OTF or TTF)
-            </button>
+                  <button className={`w-full p-3 border rounded-lg ${
+                    theme === 'dark'
+                      ? 'border-gray-700 text-gray-400 hover:bg-gray-700/50'
+                      : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                  } transition-colors flex items-center justify-center gap-2`}>
+                    <Upload className="w-4 h-4" />
+                    Upload font file (OTF or TTF)
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Preview Section */}
-            <div className="mt-8 p-6 bg-gray-800/30 border border-gray-700 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-400 mb-4">Typography Preview</h4>
-              <div className="space-y-4">
-                <div style={{ fontFamily: selectedFonts.title === 'custom' ? typography.customTitleFont : selectedFonts.title }}>
-                  <h1 className="text-3xl font-bold text-white">Main Heading Example</h1>
-                </div>
-                <div style={{ fontFamily: selectedFonts.subtitle === 'custom' ? typography.customSubtitleFont : selectedFonts.subtitle }}>
-                  <h2 className="text-xl font-semibold text-gray-300">Subtitle Example</h2>
-                </div>
-                <div style={{ fontFamily: selectedFonts.body === 'custom' ? typography.customBodyFont : selectedFonts.body }}>
-                  <p className="text-base text-gray-400">
-                    This is an example of body text that shows how your selected fonts will look in paragraphs and general content. 
-                    The quick brown fox jumps over the lazy dog.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </FormSection>
+        {/* Extra bottom padding to prevent overlap with bottom bar */}
+        <div className="pb-16"></div>
       </motion.div>
     );
   };
@@ -2209,44 +2296,44 @@ const renderFormActions = () => {
         exit="exit"
         className="w-full space-y-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-white" id="section-system-integration">System Integration</h2>
-            <p className="text-gray-400 mt-1">Connect your systems for a streamlined workflow</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-system-integration">System Integration</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Connect your systems for a streamlined workflow</p>
           </div>
           <ShareSection formId={formId} section="System Integration" />
         </div>
 
         {/* Help Banner */}
-          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
+        <div className={`${theme === 'dark' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'} border rounded-lg p-4 mb-6`}>
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-emerald-400 mt-0.5" />
             <div>
               <p className="text-sm text-emerald-400 font-medium mb-1">Need help with the setup?</p>
-              <p className="text-sm text-emerald-400/80">
+              <p className={`text-sm ${theme === 'dark' ? 'text-emerald-400/80' : 'text-emerald-600/80'}`}>
                 Don't worry if you're missing some information! You can skip fields you're unsure about, 
                 and our team will guide you through the setup process later. We'll help you locate API keys, 
                 configure integrations, and optimize your workflow.
               </p>
             </div>
           </div>
-          </div>
+        </div>
 
         <FormSection>
           {/* CRM Integration */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <div className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'} flex items-center justify-center`}>
                 <Building2 className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">CRM Integration</h3>
-                <p className="text-sm text-gray-400">Connect your Customer Relationship Management system</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>CRM Integration</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Connect your Customer Relationship Management system</p>
               </div>
-              </div>
+            </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Select Your CRM</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Select Your CRM</label>
               <div className="grid grid-cols-2 gap-3">
                 {SYSTEM_INTEGRATION_OPTIONS.crm.map(option => (
                   <button
@@ -2258,8 +2345,12 @@ const renderFormActions = () => {
                     }))}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
                       ${systemIntegrationData.crm.system === option.value
-                        ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? theme === 'dark'
+                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                          : 'bg-blue-50 border-blue-300 text-blue-700'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     <span className="flex-shrink-0">{option.icon}</span>
@@ -2276,13 +2367,17 @@ const renderFormActions = () => {
                     crm: { ...prev.crm, customSystem: e.target.value }
                   }))}
                   placeholder="Enter your CRM name"
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className={`w-full ${
+                    theme === 'dark'
+                      ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-800'
+                  } border rounded-lg p-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
                 />
               )}
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">CRM Instance Details</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>CRM Instance Details</label>
               <input
                 type="text"
                 value={systemIntegrationData.crm.instance}
@@ -2291,7 +2386,11 @@ const renderFormActions = () => {
                   crm: { ...prev.crm, instance: e.target.value }
                 }))}
                 placeholder="Your CRM instance name or URL"
-                className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className={`w-full ${
+                  theme === 'dark'
+                    ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-800'
+                } border rounded-lg p-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
               />
               <div className="relative">
                 <input
@@ -2302,31 +2401,35 @@ const renderFormActions = () => {
                     crm: { ...prev.crm, apiKey: e.target.value }
                   }))}
                   placeholder="API Key (if available)"
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className={`w-full ${
+                    theme === 'dark'
+                      ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-800'
+                  } border rounded-lg p-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Info className="w-4 h-4 text-gray-500" />
+                  <Info className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-gray-800 my-8"></div>
+          <div className={`border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} my-8`}></div>
 
           {/* Calendar Integration */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <div className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} flex items-center justify-center`}>
                 <Calendar className="w-4 h-4 text-purple-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Calendar Integration</h3>
-                <p className="text-sm text-gray-400">Connect your scheduling tools</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Calendar Integration</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Connect your scheduling tools</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Scheduling Tool</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Scheduling Tool</label>
               <div className="grid grid-cols-2 gap-3">
                 {SYSTEM_INTEGRATION_OPTIONS.scheduling.map(option => (
                   <button
@@ -2338,8 +2441,12 @@ const renderFormActions = () => {
                     }))}
                     className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
                       ${systemIntegrationData.calendar.schedulingTool === option.value
-                        ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
-                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        ? theme === 'dark'
+                          ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
+                          : 'bg-purple-50 border-purple-300 text-purple-700'
+                        : theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     <span className="flex-shrink-0">{option.icon}</span>
@@ -2356,28 +2463,32 @@ const renderFormActions = () => {
                     calendar: { ...prev.calendar, customTool: e.target.value }
                   }))}
                   placeholder="Enter your scheduling tool name"
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className={`w-full ${
+                    theme === 'dark'
+                      ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-800'
+                  } border rounded-lg p-3 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500`}
                 />
               )}
             </div>
           </div>
 
-          <div className="border-t border-gray-800 my-8"></div>
+          <div className={`border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} my-8`}></div>
 
           {/* Sales Process Configuration */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <div className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'} flex items-center justify-center`}>
                 <Settings className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Sales Process Configuration</h3>
-                <p className="text-sm text-gray-400">Define your ideal sales workflow</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Sales Process Configuration</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Define your ideal sales workflow</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Lead Capture Method</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Lead Capture Method</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -2387,8 +2498,12 @@ const renderFormActions = () => {
                   }))}
                   className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
                     ${systemIntegrationData.process.leadCapture === 'form'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      ? theme === 'dark'
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                   <span className="flex-shrink-0"><FormInput className="w-4 h-4" /></span>
@@ -2402,98 +2517,40 @@ const renderFormActions = () => {
                   }))}
                   className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
                     ${systemIntegrationData.process.leadCapture === 'manual'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                      ? theme === 'dark'
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                   <span className="flex-shrink-0"><UserPlus className="w-4 h-4" /></span>
                   <span>Manual Entry</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, leadCapture: 'import' }
-                  }))}
-                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
-                    ${systemIntegrationData.process.leadCapture === 'import'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                    }`}
-                >
-                  <span className="flex-shrink-0"><FileImport className="w-4 h-4" /></span>
-                  <span>Data Import</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, leadCapture: 'other' }
-                  }))}
-                  className={`p-3 border rounded-lg text-left transition-all duration-200 flex items-center gap-3
-                    ${systemIntegrationData.process.leadCapture === 'other'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-                    }`}
-                >
-                  <span className="flex-shrink-0"><Plus className="w-4 h-4" /></span>
-                  <span>Other</span>
-                </button>
               </div>
-              {systemIntegrationData.process.leadCapture === 'other' && (
-                <input
-                  type="text"
-                  value={systemIntegrationData.process.customLeadCapture || ''}
-                  onChange={(e) => setSystemIntegrationData(prev => ({
-                    ...prev,
-                    process: { ...prev.process, customLeadCapture: e.target.value }
-                  }))}
-                  placeholder="Specify your lead capture method"
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-              )}
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Status Change Workflow</label>
+              <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Lead Status Workflow</label>
               <textarea
-                value={systemIntegrationData.process.statusChanges}
+                value={systemIntegrationData.process.leadStatusFlow}
                 onChange={(e) => setSystemIntegrationData(prev => ({
                   ...prev,
-                  process: { ...prev.process, statusChanges: e.target.value }
+                  process: { ...prev.process, leadStatusFlow: e.target.value }
                 }))}
                 placeholder="How should lead status changes be handled? (e.g., Qualified → Meeting Scheduled → Demo Completed)"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Team Notifications</label>
-              <textarea
-                value={systemIntegrationData.process.notifications}
-                onChange={(e) => setSystemIntegrationData(prev => ({
-                  ...prev,
-                  process: { ...prev.process, notifications: e.target.value }
-                }))}
-                placeholder="How should your team be notified of updates? (e.g., Email for new leads, Slack for status changes)"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-300">Additional Steps or Automation</label>
-              <textarea
-                value={systemIntegrationData.process.additionalSteps}
-                onChange={(e) => setSystemIntegrationData(prev => ({
-                  ...prev,
-                  process: { ...prev.process, additionalSteps: e.target.value }
-                }))}
-                placeholder="Any other steps or automation you'd like to implement? (e.g., Follow-up email sequences, Lead scoring)"
-                className="w-full h-24 bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className={`w-full h-24 ${
+                  theme === 'dark'
+                    ? 'bg-gray-800/50 border-gray-700 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-800'
+                } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
               />
             </div>
           </div>
         </FormSection>
+        {/* Extra bottom padding to prevent overlap with bottom bar */}
+        <div className="pb-16"></div>
       </motion.div>
     );
   };
@@ -2569,6 +2626,10 @@ const renderFormActions = () => {
         <div 
           className="relative p-4 rounded-lg cursor-pointer group transition-all duration-200 hover:ring-2 hover:ring-white/20"
           style={{ backgroundColor: colorValue }}
+          onClick={() => {
+            // Mark as custom when the color is clicked
+            setSelectedColors(prev => ({ ...prev, [colorType.replace('Color', '')]: 'custom' }));
+          }}
         >
           <div className="bg-white/10 backdrop-blur-sm rounded p-3">
             <p className="text-white text-sm font-medium">{label}</p>
@@ -2582,16 +2643,29 @@ const renderFormActions = () => {
                   setSelectedColors(prev => ({ ...prev, [colorType.replace('Color', '')]: 'custom' }));
                 }}
                 className="w-24 bg-white/10 text-white/70 text-xs px-2 py-1 rounded border border-white/20 focus:outline-none focus:ring-1 focus:ring-white/30"
-              />
-              <input
-                type="color"
-                value={colorValue}
-                onChange={(e) => {
-                  setBrandAssets(prev => ({ ...prev, [colorType]: e.target.value }));
-                  setSelectedColors(prev => ({ ...prev, [colorType.replace('Color', '')]: 'custom' }));
+                onClick={(e) => {
+                  // Prevent event propagation to parent
+                  e.stopPropagation();
                 }}
-                className="w-6 h-6 rounded overflow-hidden cursor-pointer"
               />
+              <div className="relative inline-block">
+                <input
+                  type="color"
+                  value={colorValue}
+                  onChange={(e) => {
+                    setBrandAssets(prev => ({ ...prev, [colorType]: e.target.value }));
+                    setSelectedColors(prev => ({ ...prev, [colorType.replace('Color', '')]: 'custom' }));
+                  }}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  onClick={(e) => {
+                    // Prevent event propagation to parent
+                    e.stopPropagation();
+                  }}
+                />
+                <div className="w-6 h-6 border border-white/30 rounded overflow-hidden flex items-center justify-center">
+                  <Palette className="w-4 h-4 text-white/70" />
+                </div>
+              </div>
             </div>
           </div>
           {/* Add a subtle overlay on hover to indicate interactivity */}
@@ -2665,10 +2739,20 @@ const renderFormActions = () => {
     }
   }, [showWelcome]);
 
+  // Add state for preview background color
+  const [previewBgColor, setPreviewBgColor] = useState('#FFFFFF');
+
   return (
-    <div className="min-h-screen bg-[#02040a] flex">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'} relative overflow-hidden`}>
+      
+      {/* Add background decoration that works in both themes */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className={`absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full ${theme === 'dark' ? 'bg-emerald-900/5' : 'bg-emerald-100/50'}`}></div>
+        <div className={`absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full ${theme === 'dark' ? 'bg-emerald-900/5' : 'bg-emerald-100/50'}`}></div>
+      </div>
+      
       {showWelcome ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="h-screen flex items-center justify-center">
           <WelcomeScreen 
             clientName={businessDetails.name || ''} 
             onStart={() => setShowWelcome(false)} 
@@ -2693,9 +2777,9 @@ const renderFormActions = () => {
       ) : (
         <>
           {/* Left sidebar with progress tracker */}
-          <div className="hidden md:block fixed top-0 left-0 h-screen w-64 bg-[#02040a] border-r border-gray-800 flex flex-col">
+          <div className={`hidden md:block fixed top-0 left-0 h-screen w-64 ${theme === 'dark' ? 'bg-[#02040a] border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col`}>
             <div className="p-6 flex-1 overflow-y-auto">
-              <h1 className="text-2xl font-bold text-white mb-6">Onboarding</h1>
+              <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-6`}>Onboarding</h1>
               <ProgressTracker 
                 steps={steps} 
                 currentStep={currentStep} 
@@ -2703,22 +2787,14 @@ const renderFormActions = () => {
                 isAnimating={animatingNav}
               />
             </div>
-            
-            {/* Progress Pie Chart - Fixed at bottom */}
-            <div className="p-6 pt-4 border-t border-gray-700/50">
-              <div className="flex flex-col items-center">
-                <p className="text-sm text-gray-400 mb-3">Total Progress</p>
-                <ProgressPie progress={calculateProgress()} />
-              </div>
-            </div>
           </div>
 
-          {/* Main content area */}
-          <div className="flex-1 md:ml-64 bg-[#0d1116] min-h-screen">
-            <div className="max-w-4xl mx-auto p-6 md:p-10">
+          {/* Main content area - added bottom padding to prevent content from being hidden by bottom bar */}
+          <div className={`flex-1 md:ml-64 ${theme === 'dark' ? 'bg-[#0d1116]' : 'bg-gray-50'} min-h-screen`}>
+            <div className="max-w-4xl mx-auto p-6 md:p-10 pb-36">
               {/* Mobile progress indicator */}
               <div className="md:hidden mb-8">
-                <h1 className="text-2xl font-bold text-white mb-6">Onboarding</h1>
+                <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-6`}>Onboarding</h1>
                 <ProgressTracker steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
               </div>
 
@@ -2728,14 +2804,64 @@ const renderFormActions = () => {
                   {renderFormContent()}
                 </AnimatePresence>
               </div>
-              {renderFormActions()}
             </div>
           </div>
         </>
       )}
+      
+      {/* Bottom progress tracker container - hide when welcome screen or completion screen is shown */}
+      {!showWelcome && !isCompleted && (
+        <div className={`fixed bottom-0 left-0 p-4 z-20 ${theme === 'dark' ? 'bg-gray-900/80' : 'bg-white/90'} backdrop-blur-sm border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} w-full`}>
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <ProgressPie progress={formProgress} />
+              <div>
+                <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                  {formProgress === 100 ? 'Completed!' : `${formProgress}% Complete`}
+                </p>
+                <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {currentStep + 1} of {steps.length} sections
+                </p>
+              </div>
+            </div>
+            <div>
+              {/* Continue/Previous buttons with theme awareness */}
+              <div className="flex space-x-3">
+                {currentStep > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStepNavigation('previous')}
+                    disabled={isSubmitting || animatingNav}
+                    className={`flex items-center ${theme === 'dark' ? 'text-gray-200 border-gray-700 hover:bg-gray-800' : 'text-gray-800 border-gray-300 hover:bg-gray-100'}`}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                )}
+                {currentStep < steps.length - 1 ? (
+                  <Button
+                    onClick={() => handleStepNavigation('next')}
+                    disabled={hasFormErrors() || isSubmitting || animatingNav}
+                    className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    Continue <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleComplete}
+                    disabled={hasFormErrors() || isSubmitting}
+                    className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {isSubmitting ? 'Saving...' : 'Complete Form'} <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default OnboardingForm;
 
@@ -2745,4 +2871,5 @@ interface BrandAssets {
   mainColor: string;
   secondaryColor: string;
   highlightColor: string;
+  additionalAssets: string;
 }

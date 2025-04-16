@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, RefreshCw, Copy, Check } from "lucide-react";
+import { RefreshCw, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -126,56 +127,45 @@ export default function WebhookSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
+    <AdminLayout>
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/admin/dashboard")}
-            className="mr-4 bg-white/10 hover:bg-white/20 text-white"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              System Webhook Settings
-            </h1>
-            <p className="text-gray-400 mt-1">
-              Configure global webhook settings for all forms
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">
+            System Webhook Settings
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Configure global webhook settings for all forms
+          </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-gray-800/50 border border-gray-700">
-            <TabsTrigger value="settings" className="data-[state=active]:bg-gray-700">
+          <TabsList>
+            <TabsTrigger value="settings">
               Webhook Settings
             </TabsTrigger>
-            <TabsTrigger value="submissions" className="data-[state=active]:bg-gray-700">
+            <TabsTrigger value="submissions">
               All Form Submissions
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="settings" className="space-y-4">
-            <Card className="bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-white">Global Webhook Configuration</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-xl font-semibold">Global Webhook Configuration</CardTitle>
+                <CardDescription>
                   Configure a webhook to receive real-time notifications when clients submit data to any form in the system.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="webhookUrl" className="text-gray-300">Webhook URL</Label>
+                  <Label htmlFor="webhookUrl">Webhook URL</Label>
                   <Input
                     id="webhookUrl"
                     placeholder="https://your-api.example.com/webhook"
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
                   />
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-500">
                     The URL that will receive webhook events when clients submit form data to any form.
                   </p>
                 </div>
@@ -186,13 +176,13 @@ export default function WebhookSettings() {
                     checked={webhookEnabled}
                     onCheckedChange={setWebhookEnabled}
                   />
-                  <Label htmlFor="webhookEnabled" className="text-gray-300">
+                  <Label htmlFor="webhookEnabled">
                     Enable Webhook for All Forms
                   </Label>
                 </div>
 
-                <div className="space-y-4 border border-gray-800 rounded-md p-4">
-                  <h3 className="text-white font-medium">Notification Settings</h3>
+                <div className="space-y-4 border rounded-md p-4">
+                  <h3 className="font-medium">Notification Settings</h3>
                   
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -201,11 +191,11 @@ export default function WebhookSettings() {
                       onCheckedChange={setNotifyOnSectionCompletion}
                       disabled={!webhookEnabled}
                     />
-                    <Label htmlFor="notifyOnSectionCompletion" className="text-gray-300">
+                    <Label htmlFor="notifyOnSectionCompletion">
                       Notify on Section Completion
                     </Label>
                   </div>
-                  <p className="text-sm text-gray-400 ml-7">
+                  <p className="text-sm text-gray-500 ml-7">
                     Send a webhook notification immediately when a section is completed. This allows you to start processing data while waiting for the full form to be completed.
                   </p>
                   
@@ -216,23 +206,22 @@ export default function WebhookSettings() {
                       onCheckedChange={setNotifyOnFormCompletion}
                       disabled={!webhookEnabled}
                     />
-                    <Label htmlFor="notifyOnFormCompletion" className="text-gray-300">
+                    <Label htmlFor="notifyOnFormCompletion">
                       Notify on Form Completion
                     </Label>
                   </div>
-                  <p className="text-sm text-gray-400 ml-7">
+                  <p className="text-sm text-gray-500 ml-7">
                     Send a webhook notification when all sections of a form are completed. This includes all section data in a single notification.
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="webhookSecret" className="text-gray-300">Webhook Secret</Label>
+                    <Label htmlFor="webhookSecret">Webhook Secret</Label>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={handleGenerateSecret}
-                      className="h-8 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
                     >
                       <RefreshCw className="w-3 h-3 mr-2" />
                       Generate New
@@ -243,18 +232,16 @@ export default function WebhookSettings() {
                       id="webhookSecret"
                       value={webhookSecret}
                       onChange={(e) => setWebhookSecret(e.target.value)}
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
                       type="password"
                     />
                     <Button
                       variant="outline"
                       onClick={copySecret}
-                      className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-500">
                     This secret is used to sign webhook payloads so you can verify they came from us.
                   </p>
                 </div>
@@ -270,103 +257,12 @@ export default function WebhookSettings() {
                 <Button
                   onClick={handleSave}
                   disabled={updateWebhookMutation.isPending}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   {updateWebhookMutation.isPending && (
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   )}
                   Save Webhook Settings
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-900/50 backdrop-blur-xl border-gray-800/50 shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-white">Webhook Testing</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Test your webhook integration with sample payloads.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Tabs defaultValue="section" className="w-full">
-                    <TabsList className="grid grid-cols-3 mb-4">
-                      <TabsTrigger value="section">Section Completion</TabsTrigger>
-                      <TabsTrigger value="form">Form Completion</TabsTrigger>
-                      <TabsTrigger value="submission">Form Submission</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="section" className="space-y-4">
-                      <p className="text-gray-300">
-                        When a section is completed, the webhook will receive:
-                      </p>
-                      <pre className="bg-gray-800/70 p-4 rounded-md text-gray-300 text-sm overflow-auto">
-{`{
-  "event": "section_completion",
-  "form_id": "form_id",
-  "form_name": "Client Name",
-  "client_email": "client@example.com",
-  "section_id": "section_id",
-  "section_name": "Business Details",
-  "data": { /* Section data */ },
-  "timestamp": "2023-06-15T12:34:56Z"
-}`}
-                      </pre>
-                    </TabsContent>
-                    
-                    <TabsContent value="form" className="space-y-4">
-                      <p className="text-gray-300">
-                        When all sections of a form are completed:
-                      </p>
-                      <pre className="bg-gray-800/70 p-4 rounded-md text-gray-300 text-sm overflow-auto">
-{`{
-  "event": "form_completion",
-  "form_id": "form_id",
-  "form_name": "Client Name",
-  "client_email": "client@example.com",
-  "form_data": { /* Form data */ },
-  "sections": [
-    {
-      "section_id": "section_id_1",
-      "section_name": "Business Details",
-      "data": { /* Section data */ }
-    },
-    {
-      "section_id": "section_id_2",
-      "section_name": "Target Audience",
-      "data": { /* Section data */ }
-    }
-  ],
-  "timestamp": "2023-06-15T12:34:56Z"
-}`}
-                      </pre>
-                    </TabsContent>
-                    
-                    <TabsContent value="submission" className="space-y-4">
-                      <p className="text-gray-300">
-                        When a form submission is received:
-                      </p>
-                      <pre className="bg-gray-800/70 p-4 rounded-md text-gray-300 text-sm overflow-auto">
-{`{
-  "event": "form_submission",
-  "form_id": "form_id",
-  "form_name": "Client Name",
-  "client_email": "client@example.com",
-  "data": { /* Submission data */ },
-  "timestamp": "2023-06-15T12:34:56Z"
-}`}
-                      </pre>
-                    </TabsContent>
-                  </Tabs>
-                  
-                  <Button
-                    variant="outline"
-                    className="w-full bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-                    disabled={!webhookEnabled || !webhookUrl}
-                  >
-                    Send Test Webhook
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -425,6 +321,6 @@ export default function WebhookSettings() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </AdminLayout>
   );
 } 

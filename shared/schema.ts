@@ -1,25 +1,32 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define enum for user roles
+export const userRoleEnum = pgEnum('user_role', ['admin', 'editor', 'viewer']);
+
+// Define enum for invitation status
+export const invitationStatusEnum = pgEnum('invitation_status', ['pending', 'accepted', 'expired']);
+
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
+  user_id: uuid("user_id").primaryKey(), // References auth.users(id) - FK constraint handled in DB
+  email: text("email").unique(), // Assuming email is still needed here
   name: text("name"),
-  isAdmin: boolean("is_admin").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  role: userRoleEnum("role").notNull().default("viewer"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()),
 });
 
 export const onboardingForms = pgTable("onboarding_forms", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   clientName: text("client_name").notNull(),
   clientEmail: text("client_email").notNull(),
   status: text("status").default("pending"),
   progress: integer("progress").default(0),
   data: jsonb("data"),
-  createdAt: timestamp("created_at").defaultNow(),
-  lastReminder: timestamp("last_reminder"),
-  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  lastReminder: timestamp("last_reminder", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => users.user_id),
 });
 
 export const formSections = pgTable("form_sections", {
@@ -53,9 +60,21 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const invitations = pgTable("invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  role: userRoleEnum("role").notNull(), // Reference the existing userRoleEnum
+  token: text("token").notNull().unique(),
+  expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+  invited_by: uuid("invited_by").references(() => users.user_id), // Reference the user who invited
+  status: invitationStatusEnum("status").notNull().default('pending'),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true
+  user_id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
 export const insertFormSchema = createInsertSchema(onboardingForms).omit({
@@ -82,6 +101,13 @@ export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omi
   updatedAt: true
 });
 
+export const insertInvitationSchema = createInsertSchema(invitations).omit({
+  id: true,
+  created_at: true,
+  status: true, // Status is usually managed internally
+  token: true // Token is generated server-side
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -96,6 +122,9 @@ export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
 
 export type SystemSettings = typeof systemSettings.$inferSelect;
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 
 // Form validation schemas
 export const businessDetailsSchema = z.object({

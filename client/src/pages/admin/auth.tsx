@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,29 @@ export default function AdminAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if the user is already logged in when the component mounts
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        setCheckingAuth(true);
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
+          // User is already logged in, redirect to dashboard
+          console.log("User is already logged in, redirecting to dashboard");
+          setLocation("/admin/dashboard");
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, [setLocation]);
 
   const validateEmail = (email: string) => {
     return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
@@ -109,6 +132,15 @@ export default function AdminAuth() {
       setIsLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4">
