@@ -17,7 +17,7 @@ A streamlined client onboarding application that allows clients to complete an o
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js (v20)
 - npm or yarn
 - Supabase account for database and authentication
 
@@ -41,9 +41,14 @@ A streamlined client onboarding application that allows clients to complete an o
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
+4. Build the project
+   ```
+   npm run build
+   ```
+
 4. Start the development server
    ```
-   npm run dev
+   npm run start
    ```
 
 ## Testing the Application
