@@ -36,13 +36,6 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
       "dest": "/dist/public/index.html"
     }
   ]
