@@ -457,7 +457,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     website: '',
     linkedin: '',
     phone: '',
-    location: ''
+    location: '',
+    brandName: "",
+    logo: null,
+    mainColor: "#000000",
+    secondaryColor: "#000000",
+    highlightColor: "#000000"
+
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -789,45 +795,27 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   // Load business details from form data
   useEffect(() => {
     if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.businessDetails) {
-        setBusinessDetails(sectionData.businessDetails);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.businessDetails) {
-        setBusinessDetails(formData.businessDetails);
-      }
+      setBusinessDetails(section.data.businessDetails || {});
+    } else if (form?.data?.businessDetails) {
+      setBusinessDetails(form.data.businessDetails);
     }
   }, [form, section, sectionId]);
 
   // Load campaign data from form data
   useEffect(() => {
-    if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.campaign) {
-        setCampaign(sectionData.campaign);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.campaign) {
-        setCampaign(formData.campaign);
-      }
+    if (sectionId && section?.data?.campaign) {
+      setCampaign(section.data.campaign);
+    } else if (form?.data?.campaign) {
+      setCampaign(form.data.campaign);
     }
   }, [form, section, sectionId]);
 
   // Load audience data from form data
   useEffect(() => {
-    if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.audience) {
-        setAudience(sectionData.audience);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.audience) {
-        setAudience(formData.audience);
-      }
+    if (sectionId && section?.data?.audience) {
+      setAudience(section.data.audience);
+    } else if (form?.data?.audience) {
+      setAudience(form.data.audience);
     }
   }, [form, section, sectionId]);
 
@@ -2802,113 +2790,6 @@ const renderFormActions = () => {
 
   // Add state for preview background color
   const [previewBgColor, setPreviewBgColor] = useState('#FFFFFF');
-
-  // Add auto-save functionality
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
-  // Auto-save effect
-  useEffect(() => {
-    const autoSave = async () => {
-      if (autoSaveStatus === 'saving') return; // Prevent multiple saves
-      
-      setAutoSaveStatus('saving');
-      try {
-        const formData = {
-          businessDetails,
-          campaign,
-          audience,
-          typography,
-          brandAssets,
-          completedSteps
-        };
-
-        await updateFormMutation.mutateAsync(formData);
-        setLastSaved(new Date());
-        setAutoSaveStatus('saved');
-        
-        // Reset to idle after 2 seconds
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-        setAutoSaveStatus('error');
-        setTimeout(() => setAutoSaveStatus('idle'), 3000);
-      }
-    };
-
-    // Debounce auto-save by 2 seconds
-    const timeoutId = setTimeout(autoSave, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [businessDetails, campaign, audience, typography, brandAssets]);
-
-  // Add smart suggestions for business types based on website
-  const getBusinessTypeSuggestion = (website: string) => {
-    if (!website) return null;
-    
-    const domain = website.toLowerCase();
-    if (domain.includes('shop') || domain.includes('store') || domain.includes('ecommerce')) {
-      return 'ecommerce';
-    }
-    if (domain.includes('saas') || domain.includes('software') || domain.includes('app')) {
-      return 'saas';
-    }
-    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('design')) {
-      return 'agency';
-    }
-    if (domain.includes('health') || domain.includes('medical') || domain.includes('clinic')) {
-      return 'healthcare';
-    }
-    return null;
-  };
-
-  // Add smart phone number formatting with country detection
-  const detectCountryFromLocation = (location: string) => {
-    const loc = location.toLowerCase();
-    if (loc.includes('uk') || loc.includes('united kingdom') || loc.includes('england') || loc.includes('scotland') || loc.includes('wales')) {
-      return 'UK';
-    }
-    if (loc.includes('usa') || loc.includes('united states') || loc.includes('america')) {
-      return 'US';
-    }
-    if (loc.includes('canada')) {
-      return 'CA';
-    }
-    if (loc.includes('australia')) {
-      return 'AU';
-    }
-    return null;
-  };
-
-  // Enhanced phone formatting with country-specific logic
-  const formatPhoneNumberSmart = (value: string, location: string = '') => {
-    const cleaned = value.replace(/[^\d\s+]/g, '');
-    const country = detectCountryFromLocation(location);
-    
-    if (cleaned.startsWith('+')) {
-      return cleaned;
-    }
-    
-    switch (country) {
-      case 'UK':
-        if (cleaned.startsWith('0')) {
-          return `+44 ${cleaned.substring(1)}`;
-        }
-        break;
-      case 'US':
-      case 'CA':
-        if (cleaned.length === 10) {
-          return `+1 ${cleaned}`;
-        }
-        break;
-      case 'AU':
-        if (cleaned.startsWith('0')) {
-          return `+61 ${cleaned.substring(1)}`;
-        }
-        break;
-    }
-    
-    return cleaned;
-  };
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'} relative overflow-hidden`}>

@@ -124,7 +124,7 @@ const formatPhoneNumber = (value: string) => {
 
 interface FormField {
   label: string;
-  name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize";
+  name: keyof BusinessDetails | "campaignName" | "objective" | "jobTitles" | "industries" | "companySize";
   icon: any;
   placeholder: string;
   type?: string;
@@ -457,7 +457,13 @@ export function OnboardingForm({ formId, sectionId }: Props) {
     website: '',
     linkedin: '',
     phone: '',
-    location: ''
+    location: '',
+    brandName: "",
+    logo: null,
+    mainColor: "#000000",
+    secondaryColor: "#000000",
+    highlightColor: "#000000"
+
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -789,45 +795,27 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   // Load business details from form data
   useEffect(() => {
     if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.businessDetails) {
-        setBusinessDetails(sectionData.businessDetails);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.businessDetails) {
-        setBusinessDetails(formData.businessDetails);
-      }
+      setBusinessDetails(section.data.businessDetails || {});
+    } else if (form?.data?.businessDetails) {
+      setBusinessDetails(form.data.businessDetails);
     }
   }, [form, section, sectionId]);
 
   // Load campaign data from form data
   useEffect(() => {
-    if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.campaign) {
-        setCampaign(sectionData.campaign);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.campaign) {
-        setCampaign(formData.campaign);
-      }
+    if (sectionId && section?.data?.campaign) {
+      setCampaign(section.data.campaign);
+    } else if (form?.data?.campaign) {
+      setCampaign(form.data.campaign);
     }
   }, [form, section, sectionId]);
 
   // Load audience data from form data
   useEffect(() => {
-    if (sectionId && section?.data) {
-      const sectionData = section.data as any;
-      if (sectionData.audience) {
-        setAudience(sectionData.audience);
-      }
-    } else if (form?.data) {
-      const formData = form.data as any;
-      if (formData.audience) {
-        setAudience(formData.audience);
-      }
+    if (sectionId && section?.data?.audience) {
+      setAudience(section.data.audience);
+    } else if (form?.data?.audience) {
+      setAudience(form.data.audience);
     }
   }, [form, section, sectionId]);
 
@@ -1307,7 +1295,8 @@ const renderFormActions = () => {
   };
 
   const handleShareSection = (e: React.MouseEvent, sectionTitle: string) => {
-    e.stopPropagation(); // Share functionality is handled by the ShareSection component
+    e.stopPropagation();
+    // Share functionality is handled by the ShareSection component
   };
 
   const hasFormErrors = () => {
@@ -1396,108 +1385,57 @@ const renderFormActions = () => {
       >
         <div className="flex justify-between items-start">
           <div>
-            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-brand-assets">Brand Assets & Guidelines</h2>
-            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Help us understand your brand by sharing your visual identity</p>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} id="section-brand-assets">Brand Assets</h2>
+            <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Upload your brand logo and select your brand colors</p>
           </div>
           <ShareSection formId={formId} section="Brand Assets" />
         </div>
 
         <FormSection>
-          <div className="space-y-10">
-            {/* Quick Start Guide */}
-            <div className={`p-6 rounded-xl border-2 border-dashed ${theme === 'dark' ? 'border-emerald-500/30 bg-emerald-900/10' : 'border-emerald-300 bg-emerald-50'}`}>
-              <div className="flex items-start gap-4">
-                <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-                  <Target className={`w-5 h-5 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                </div>
-                <div className="flex-1">
-                  <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'} mb-2`}>What we need from you</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Essential:</h4>
-                      <ul className={`text-sm space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                        <li>• Your logo (any format)</li>
-                        <li>• Primary brand color</li>
-                        <li>• Company name</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Optional but helpful:</h4>
-                      <ul className={`text-sm space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                        <li>• Brand guidelines document</li>
-                        <li>• Secondary colors</li>
-                        <li>• Font preferences</li>
-                        <li>• Style references</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Brand Name */}
-            <div className="space-y-4">
-              <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Name</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>What should we call your brand?</p>
-              </div>
-              <input
-                type="text"
-                value={brandAssets.brandName}
-                onChange={(e) => setBrandAssets(prev => ({ ...prev, brandName: e.target.value }))}
-                placeholder="Enter your brand or company name"
-                className={`w-full max-w-md ${
-                  theme === 'dark'
-                    ? 'bg-gray-800/50 border-gray-700 text-gray-200'
-                    : 'bg-white border-gray-300 text-gray-800'
-                } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
-              />
-            </div>
-
+          <div className="space-y-8">
             {/* Logo Upload */}
             <div className="space-y-4">
               <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Logo</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Upload your logo in any format (PNG, JPG, SVG, PDF)</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Logo</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Upload your company logo</p>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <input
-                    type="file"
-                    id="logo-upload"
-                    onChange={handleLogoUpload}
-                    accept="image/*,.pdf"
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="logo-upload"
-                    className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
-                      theme === 'dark' 
-                        ? 'border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-900/10' 
-                        : 'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
-                    }`}
+              <div className="mt-4">
+                <input
+                  type="file"
+                  id="logo-upload"
+                  onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <label
+                  htmlFor="logo-upload"
+                  className={`block w-full border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    theme === 'dark' 
+                      ? 'border-gray-700 hover:border-gray-600' 
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div
+                    className="cursor-pointer flex flex-col items-center justify-center"
                   >
                     {logoPreview ? (
                       <div className="space-y-4">
-                        <img src={logoPreview} alt="Logo preview" className="max-h-32 mx-auto rounded-lg" />
-                        <div className="space-y-2">
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Logo uploaded successfully!</p>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setLogoPreview('');
-                              setLogoFile(null);
-                            }}
-                            className={`text-sm ${theme === 'dark' ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
-                          >
-                            Remove and upload different logo
-                          </button>
-                        </div>
+                        <img src={logoPreview} alt="Logo preview" className="max-h-40 mx-auto" />
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLogoPreview('');
+                            setLogoFile(null);
+                          }}
+                          className="text-sm text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Remove logo
+                        </button>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className={`w-16 h-16 mx-auto rounded-xl ${
+                        <div className={`w-20 h-20 mx-auto rounded-full ${
                           theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
                         } flex items-center justify-center`}>
                           <Upload className={`w-8 h-8 ${
@@ -1505,339 +1443,350 @@ const renderFormActions = () => {
                           }`} />
                         </div>
                         <div>
-                          <p className={`text-base font-medium ${
-                            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                          }`}>Drop your logo here or click to browse</p>
-                          <p className={`text-sm ${
+                          <p className={`text-sm font-medium ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}>Drop your logo here or click to upload</p>
+                          <p className={`text-xs ${
                             theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                          } mt-1`}>PNG, JPG, SVG, or PDF • Up to 10MB</p>
+                          } mt-1`}>SVG, PNG, or JPG (max. 800x400px)</p>
                         </div>
                       </div>
                     )}
-                  </label>
-                </div>
-
-                {/* Logo Tips */}
-                <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
-                  <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-3`}>Logo Tips</h4>
-                  <ul className={`text-sm space-y-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <li>• High resolution works best</li>
-                    <li>• Transparent background preferred</li>
-                    <li>• Vector formats (SVG) are ideal</li>
-                    <li>• We'll optimize it for different uses</li>
-                  </ul>
-                </div>
+                  </div>
+                </label>
               </div>
             </div>
 
-            {/* Brand Colors - Simplified */}
+            {/* Brand Colors */}
             <div className="space-y-6">
               <div>
                 <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Colors</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Choose or enter your brand colors. Click any color below to customize it.</p>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Choose colors that represent your brand</p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
-                {/* Primary Color */}
-                <div className="space-y-3">
-                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Primary Color <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-3">
-                    {/* Color Picker */}
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={brandAssets.mainColor}
-                        onChange={(e) => setBrandAssets(prev => ({ ...prev, mainColor: e.target.value }))}
-                        className="w-full h-16 rounded-lg border-2 border-gray-300 cursor-pointer"
-                        style={{ backgroundColor: brandAssets.mainColor }}
-                      />
-                      <div className="absolute inset-0 rounded-lg border-2 border-gray-300 pointer-events-none flex items-center justify-center">
-                        <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
-                          Click to change
-                        </span>
-                      </div>
-                    </div>
-                    {/* Hex Input */}
-                    <input
-                      type="text"
-                      value={brandAssets.mainColor.toUpperCase()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
-                          setBrandAssets(prev => ({ ...prev, mainColor: value }));
-                        }
-                      }}
-                      placeholder="#000000"
-                      className={`w-full text-center font-mono text-sm ${
-                        theme === 'dark'
-                          ? 'bg-gray-800/50 border-gray-700 text-gray-200'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } border rounded-lg p-2 focus:outline-none focus:border-emerald-500`}
-                    />
-                  </div>
-                </div>
-
-                {/* Secondary Color */}
-                <div className="space-y-3">
-                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Secondary Color
-                  </label>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={brandAssets.secondaryColor}
-                        onChange={(e) => setBrandAssets(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                        className="w-full h-16 rounded-lg border-2 border-gray-300 cursor-pointer"
-                        style={{ backgroundColor: brandAssets.secondaryColor }}
-                      />
-                      <div className="absolute inset-0 rounded-lg border-2 border-gray-300 pointer-events-none flex items-center justify-center">
-                        <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
-                          Click to change
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={brandAssets.secondaryColor.toUpperCase()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
-                          setBrandAssets(prev => ({ ...prev, secondaryColor: value }));
-                        }
-                      }}
-                      placeholder="#000000"
-                      className={`w-full text-center font-mono text-sm ${
-                        theme === 'dark'
-                          ? 'bg-gray-800/50 border-gray-700 text-gray-200'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } border rounded-lg p-2 focus:outline-none focus:border-emerald-500`}
-                    />
-                  </div>
-                </div>
-
-                {/* Accent Color */}
-                <div className="space-y-3">
-                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Accent Color
-                  </label>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={brandAssets.highlightColor}
-                        onChange={(e) => setBrandAssets(prev => ({ ...prev, highlightColor: e.target.value }))}
-                        className="w-full h-16 rounded-lg border-2 border-gray-300 cursor-pointer"
-                        style={{ backgroundColor: brandAssets.highlightColor }}
-                      />
-                      <div className="absolute inset-0 rounded-lg border-2 border-gray-300 pointer-events-none flex items-center justify-center">
-                        <span className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded">
-                          Click to change
-                        </span>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={brandAssets.highlightColor.toUpperCase()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
-                          setBrandAssets(prev => ({ ...prev, highlightColor: value }));
-                        }
-                      }}
-                      placeholder="#000000"
-                      className={`w-full text-center font-mono text-sm ${
-                        theme === 'dark'
-                          ? 'bg-gray-800/50 border-gray-700 text-gray-200'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } border rounded-lg p-2 focus:outline-none focus:border-emerald-500`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Color Presets */}
-              <div className="space-y-3">
-                <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Or choose from popular color combinations:
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { name: 'Professional Blue', primary: '#2563EB', secondary: '#1E40AF', accent: '#3B82F6' },
-                    { name: 'Modern Green', primary: '#059669', secondary: '#047857', accent: '#10B981' },
-                    { name: 'Creative Purple', primary: '#7C3AED', secondary: '#5B21B6', accent: '#8B5CF6' },
-                    { name: 'Bold Orange', primary: '#EA580C', secondary: '#C2410C', accent: '#F97316' },
-                  ].map((preset) => (
+              {/* Main Color */}
+              <div className="space-y-4">
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Main Color</label>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {brandPresets.mainColor.map(color => (
                     <button
-                      key={preset.name}
+                      key={color.value}
+                      type="button"
                       onClick={() => {
-                        setBrandAssets(prev => ({
-                          ...prev,
-                          mainColor: preset.primary,
-                          secondaryColor: preset.secondary,
-                          highlightColor: preset.accent
-                        }));
+                        setSelectedColors(prev => ({ ...prev, main: color.value }));
+                        if (color.value !== 'custom') {
+                          setBrandAssets(prev => ({ ...prev, mainColor: color.value }));
+                        }
                       }}
-                      className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                        theme === 'dark'
-                          ? 'border-gray-700 hover:border-gray-600 bg-gray-800/30'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      className={`group relative h-16 rounded-lg transition-all duration-200 ${
+                        selectedColors.main === color.value
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
+                          : ''
                       }`}
+                      style={{ 
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
+                      }}
                     >
-                      <div className="flex gap-1 mb-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: preset.primary }}></div>
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: preset.secondary }}></div>
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: preset.accent }}></div>
-                      </div>
-                      <p className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {preset.name}
-                      </p>
+                      <span className="sr-only">{color.name}</span>
+                      {color.value === 'custom' && (
+                        <input
+                          type="color"
+                          value={brandAssets.mainColor}
+                          onChange={(e) => {
+                            setBrandAssets(prev => ({ ...prev, mainColor: e.target.value }));
+                            setSelectedColors(prev => ({ ...prev, main: 'custom' }));
+                          }}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      )}
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
+                        {color.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Secondary Color */}
+              <div className="space-y-4">
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Secondary Color</label>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {brandPresets.secondaryColor.map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColors(prev => ({ ...prev, secondary: color.value }));
+                        if (color.value !== 'custom') {
+                          setBrandAssets(prev => ({ ...prev, secondaryColor: color.value }));
+                        }
+                      }}
+                      className={`group relative h-16 rounded-lg transition-all duration-200 ${
+                        selectedColors.secondary === color.value
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
+                          : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
+                      }}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                      {color.value === 'custom' && (
+                        <input
+                          type="color"
+                          value={brandAssets.secondaryColor}
+                          onChange={(e) => {
+                            setBrandAssets(prev => ({ ...prev, secondaryColor: e.target.value }));
+                            setSelectedColors(prev => ({ ...prev, secondary: 'custom' }));
+                          }}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      )}
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
+                        {color.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Highlight Color */}
+              <div className="space-y-4">
+                <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Highlight Color</label>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  {brandPresets.highlightColor.map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColors(prev => ({ ...prev, highlight: color.value }));
+                        if (color.value !== 'custom') {
+                          setBrandAssets(prev => ({ ...prev, highlightColor: color.value }));
+                        }
+                      }}
+                      className={`group relative h-16 rounded-lg transition-all duration-200 ${
+                        selectedColors.highlight === color.value
+                          ? `ring-2 ${theme === 'dark' ? 'ring-white' : 'ring-gray-800'} ring-offset-2 ${theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'}`
+                          : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: color.value === 'custom' ? (theme === 'dark' ? '#374151' : '#F3F4F6') : color.value,
+                        border: color.value === 'custom' ? `2px dashed ${theme === 'dark' ? '#4B5563' : '#D1D5DB'}` : 'none'
+                      }}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                      {color.value === 'custom' && (
+                        <input
+                          type="color"
+                          value={brandAssets.highlightColor}
+                          onChange={(e) => {
+                            setBrandAssets(prev => ({ ...prev, highlightColor: e.target.value }));
+                            setSelectedColors(prev => ({ ...prev, highlight: 'custom' }));
+                          }}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      )}
+                      <span className={`absolute inset-x-0 bottom-0 px-2 py-1 text-xs ${
+                        theme === 'dark' ? 'text-gray-300 bg-black/50' : 'text-gray-700 bg-white/70'
+                      } rounded-b-lg`}>
+                        {color.name}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Brand Guidelines Upload */}
+            {/* Additional Brand Assets */}
             <div className="space-y-4">
               <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Guidelines & Assets</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Upload any brand guidelines, style guides, or reference materials you have</p>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <input
-                    type="file"
-                    id="brand-guidelines-upload"
-                    multiple
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.svg"
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="brand-guidelines-upload"
-                    className={`block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 ${
-                      theme === 'dark' 
-                        ? 'border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-900/10' 
-                        : 'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50'
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      <div className={`w-12 h-12 mx-auto rounded-lg ${
-                        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
-                      } flex items-center justify-center`}>
-                        <Upload className={`w-6 h-6 ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                        }`} />
-                      </div>
-                      <div>
-                        <p className={`text-sm font-medium ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                        }`}>Upload brand materials</p>
-                        <p className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                        } mt-1`}>PDF, DOC, images • Multiple files OK</p>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-
-                <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
-                  <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-3`}>What to include:</h4>
-                  <ul className={`text-sm space-y-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <li>• Brand style guides</li>
-                    <li>• Color palettes</li>
-                    <li>• Typography guidelines</li>
-                    <li>• Logo variations</li>
-                    <li>• Visual references</li>
-                    <li>• Competitor examples</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Notes */}
-            <div className="space-y-4">
-              <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Additional Brand Notes</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Tell us about your brand personality, style preferences, or anything else we should know</p>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Additional Brand Assets</h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Describe any other brand assets or guidelines you'd like us to know about</p>
               </div>
               
               <textarea
                 value={brandAssets.additionalAssets}
                 onChange={(e) => setBrandAssets(prev => ({ ...prev, additionalAssets: e.target.value }))}
-                placeholder="Describe your brand style, personality, what you like/dislike, or any specific requirements..."
-                rows={4}
-                className={`w-full ${
+                placeholder="Describe any other brand assets, guidelines, or requirements (e.g., patterns, icons, imagery style, brand voice)"
+                className={`w-full h-32 ${
                   theme === 'dark'
                     ? 'bg-gray-800/50 border-gray-700 text-gray-200'
                     : 'bg-white border-gray-300 text-gray-800'
-                } border rounded-lg p-4 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none`}
+                } border rounded-lg p-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500`}
               />
             </div>
 
             {/* Brand Preview */}
             <div className="space-y-4">
-              <div>
+              <div className="flex justify-between items-center">
                 <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Brand Preview</h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>See how your brand colors work together</p>
+                <div className="flex items-center gap-2">
+                  <label className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Background:
+                  </label>
+                  <div className="relative w-6 h-6 rounded overflow-hidden border border-gray-400">
+                    <input
+                      type="color"
+                      value={previewBgColor}
+                      onChange={(e) => setPreviewBgColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="absolute inset-0" style={{ backgroundColor: previewBgColor }}></div>
+                  </div>
+                  <button
+                    onClick={() => setPreviewBgColor('#FFFFFF')}
+                    className={`text-xs px-2 py-1 rounded ${theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-700'} hover:opacity-80 transition-opacity`}
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
-              
-              <div className={`border rounded-xl p-8 ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'}`}>
+              <div 
+                className="border rounded-lg p-6 overflow-hidden transition-colors duration-200"
+                style={{ backgroundColor: previewBgColor }}
+              >
                 <div className="space-y-6">
                   {/* Logo Preview */}
                   {logoPreview && (
-                    <div className="flex justify-center">
-                      <img src={logoPreview} alt="Brand logo" className="max-h-16" />
+                    <div className="flex justify-center p-4 bg-white/50 backdrop-blur-sm rounded-lg">
+                      <img src={logoPreview} alt="Brand logo" className="max-h-24" />
                     </div>
                   )}
 
-                  {/* Brand Name */}
-                  <div className="text-center">
-                    <h4 className="text-2xl font-bold" style={{ color: brandAssets.mainColor }}>
-                      {brandAssets.brandName || 'Your Brand Name'}
-                    </h4>
-                  </div>
-
-                  {/* Color Palette */}
-                  <div className="flex justify-center gap-4">
-                    <div className="text-center">
-                      <div 
-                        className="w-16 h-16 rounded-lg border-2 border-gray-200 mx-auto mb-2"
-                        style={{ backgroundColor: brandAssets.mainColor }}
-                      ></div>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Primary</p>
-                    </div>
-                    <div className="text-center">
-                      <div 
-                        className="w-16 h-16 rounded-lg border-2 border-gray-200 mx-auto mb-2"
-                        style={{ backgroundColor: brandAssets.secondaryColor }}
-                      ></div>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Secondary</p>
-                    </div>
-                    <div className="text-center">
-                      <div 
-                        className="w-16 h-16 rounded-lg border-2 border-gray-200 mx-auto mb-2"
-                        style={{ backgroundColor: brandAssets.highlightColor }}
-                      ></div>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Accent</p>
-                    </div>
-                  </div>
-
-                  {/* Sample UI */}
+                  {/* Color Scheme Preview */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p style={{ color: brandAssets.secondaryColor }}>
-                        Sample text in your secondary color
-                      </p>
-                      <button
-                        className="px-4 py-2 rounded-lg text-white font-medium"
-                        style={{ backgroundColor: brandAssets.highlightColor }}
-                      >
-                        Sample Button
-                      </button>
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <ColorPreviewCard
+                        label="Main Color"
+                        colorValue={brandAssets.mainColor}
+                        colorType="mainColor"
+                        selectedColors={selectedColors}
+                        setSelectedColors={setSelectedColors}
+                        brandAssets={brandAssets}
+                        setBrandAssets={setBrandAssets}
+                      />
+                      <ColorPreviewCard
+                        label="Secondary Color"
+                        colorValue={brandAssets.secondaryColor}
+                        colorType="secondaryColor"
+                        selectedColors={selectedColors}
+                        setSelectedColors={setSelectedColors}
+                        brandAssets={brandAssets}
+                        setBrandAssets={setBrandAssets}
+                      />
+                      <ColorPreviewCard
+                        label="Highlight Color"
+                        colorValue={brandAssets.highlightColor}
+                        colorType="highlightColor"
+                        selectedColors={selectedColors}
+                        setSelectedColors={setSelectedColors}
+                        brandAssets={brandAssets}
+                        setBrandAssets={setBrandAssets}
+                      />
+                    </div>
+
+                    {/* Sample UI Elements */}
+                    <div className="p-6 rounded-lg space-y-4" style={{ backgroundColor: 'rgba(17, 24, 39, 0.7)' }}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold" style={{ color: brandAssets.mainColor }}>
+                          {businessDetails.name || 'Your Brand Name'}
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, mainColor: brandAssets.mainColor }));
+                              setSelectedColors(prev => ({ ...prev, main: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.mainColor }}
+                          >
+                            Use for Main
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, secondaryColor: brandAssets.mainColor }));
+                              setSelectedColors(prev => ({ ...prev, secondary: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.secondaryColor }}
+                          >
+                            Use for Secondary
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, highlightColor: brandAssets.mainColor }));
+                              setSelectedColors(prev => ({ ...prev, highlight: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.highlightColor }}
+                          >
+                            Use for Highlight
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm" style={{ color: brandAssets.secondaryColor }}>
+                          Sample text using your brand's secondary color
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, mainColor: brandAssets.secondaryColor }));
+                              setSelectedColors(prev => ({ ...prev, main: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.mainColor }}
+                          >
+                            Use for Main
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, highlightColor: brandAssets.secondaryColor }));
+                              setSelectedColors(prev => ({ ...prev, highlight: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.highlightColor }}
+                          >
+                            Use for Highlight
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <button
+                          className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200"
+                          style={{ backgroundColor: brandAssets.highlightColor }}
+                        >
+                          Sample Button
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, mainColor: brandAssets.highlightColor }));
+                              setSelectedColors(prev => ({ ...prev, main: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.mainColor }}
+                          >
+                            Use for Main
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBrandAssets(prev => ({ ...prev, secondaryColor: brandAssets.highlightColor }));
+                              setSelectedColors(prev => ({ ...prev, secondary: 'custom' }));
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+                            style={{ borderColor: brandAssets.secondaryColor }}
+                          >
+                            Use for Secondary
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1845,9 +1794,8 @@ const renderFormActions = () => {
             </div>
           </div>
         </FormSection>
-
         {/* Extra bottom padding to prevent overlap with bottom bar */}
-        <div className="h-20"></div>
+        <div className="pb-16"></div>
       </motion.div>
     );
   };
@@ -2802,113 +2750,6 @@ const renderFormActions = () => {
 
   // Add state for preview background color
   const [previewBgColor, setPreviewBgColor] = useState('#FFFFFF');
-
-  // Add auto-save functionality
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
-  // Auto-save effect
-  useEffect(() => {
-    const autoSave = async () => {
-      if (autoSaveStatus === 'saving') return; // Prevent multiple saves
-      
-      setAutoSaveStatus('saving');
-      try {
-        const formData = {
-          businessDetails,
-          campaign,
-          audience,
-          typography,
-          brandAssets,
-          completedSteps
-        };
-
-        await updateFormMutation.mutateAsync(formData);
-        setLastSaved(new Date());
-        setAutoSaveStatus('saved');
-        
-        // Reset to idle after 2 seconds
-        setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-        setAutoSaveStatus('error');
-        setTimeout(() => setAutoSaveStatus('idle'), 3000);
-      }
-    };
-
-    // Debounce auto-save by 2 seconds
-    const timeoutId = setTimeout(autoSave, 2000);
-    return () => clearTimeout(timeoutId);
-  }, [businessDetails, campaign, audience, typography, brandAssets]);
-
-  // Add smart suggestions for business types based on website
-  const getBusinessTypeSuggestion = (website: string) => {
-    if (!website) return null;
-    
-    const domain = website.toLowerCase();
-    if (domain.includes('shop') || domain.includes('store') || domain.includes('ecommerce')) {
-      return 'ecommerce';
-    }
-    if (domain.includes('saas') || domain.includes('software') || domain.includes('app')) {
-      return 'saas';
-    }
-    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('design')) {
-      return 'agency';
-    }
-    if (domain.includes('health') || domain.includes('medical') || domain.includes('clinic')) {
-      return 'healthcare';
-    }
-    return null;
-  };
-
-  // Add smart phone number formatting with country detection
-  const detectCountryFromLocation = (location: string) => {
-    const loc = location.toLowerCase();
-    if (loc.includes('uk') || loc.includes('united kingdom') || loc.includes('england') || loc.includes('scotland') || loc.includes('wales')) {
-      return 'UK';
-    }
-    if (loc.includes('usa') || loc.includes('united states') || loc.includes('america')) {
-      return 'US';
-    }
-    if (loc.includes('canada')) {
-      return 'CA';
-    }
-    if (loc.includes('australia')) {
-      return 'AU';
-    }
-    return null;
-  };
-
-  // Enhanced phone formatting with country-specific logic
-  const formatPhoneNumberSmart = (value: string, location: string = '') => {
-    const cleaned = value.replace(/[^\d\s+]/g, '');
-    const country = detectCountryFromLocation(location);
-    
-    if (cleaned.startsWith('+')) {
-      return cleaned;
-    }
-    
-    switch (country) {
-      case 'UK':
-        if (cleaned.startsWith('0')) {
-          return `+44 ${cleaned.substring(1)}`;
-        }
-        break;
-      case 'US':
-      case 'CA':
-        if (cleaned.length === 10) {
-          return `+1 ${cleaned}`;
-        }
-        break;
-      case 'AU':
-        if (cleaned.startsWith('0')) {
-          return `+61 ${cleaned.substring(1)}`;
-        }
-        break;
-    }
-    
-    return cleaned;
-  };
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'} relative overflow-hidden`}>
