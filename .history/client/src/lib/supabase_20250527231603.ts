@@ -28,8 +28,6 @@ export type Form = {
   updated_at: string;
   slug: string;
   created_by?: string;
-  is_disabled?: boolean;
-  password?: string | null;
 }
 
 export type InsertForm = Omit<Form, 'id' | 'created_at' | 'updated_at'>;

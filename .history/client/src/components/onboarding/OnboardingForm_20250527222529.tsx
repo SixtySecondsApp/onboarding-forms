@@ -2434,70 +2434,6 @@ const renderFormActions = () => {
 
   // Update the renderCampaignForm method to use the new TextArea component
   const renderCampaignForm = () => {
-    // Smart suggestions based on business type and objective
-    const getSuccessCriteriaExamples = () => {
-      const baseExamples = {
-        'awareness': [
-          'Increase brand awareness by 30% in our target market',
-          'Generate 10,000 impressions per month',
-          'Achieve 25% increase in website traffic'
-        ],
-        'leads': [
-          'Generate 50 qualified leads per month',
-          'Achieve 15% conversion rate from visitors to leads',
-          'Build email list of 1,000 subscribers'
-        ],
-        'sales': [
-          'Increase sales by 20% this quarter',
-          'Generate $100K in new revenue',
-          'Convert 10% of leads to customers'
-        ],
-        'engagement': [
-          'Increase social media engagement by 40%',
-          'Achieve 500 comments and shares per post',
-          'Build community of 5,000 active members'
-        ]
-      };
-      
-      return baseExamples[campaign.objective as keyof typeof baseExamples] || baseExamples.leads;
-    };
-
-    const getKeyMessageSuggestions = () => {
-      switch (businessDetails.type) {
-        case 'saas':
-          return [
-            'Save time and increase productivity',
-            'Streamline your workflow',
-            'Scale your business efficiently',
-            'Reduce manual work by 80%'
-          ];
-        case 'ecommerce':
-          return [
-            'Premium quality at affordable prices',
-            'Fast shipping and easy returns',
-            'Exclusive deals for loyal customers',
-            'Sustainable and eco-friendly products'
-          ];
-        case 'agency':
-          return [
-            'Expert team with proven results',
-            'Customized solutions for your business',
-            'ROI-focused marketing strategies',
-            'Full-service digital marketing'
-          ];
-        default:
-          return [
-            'Trusted by industry leaders',
-            'Proven results and expertise',
-            'Personalized service and support',
-            'Innovation that drives success'
-          ];
-      }
-    };
-
-    const successExamples = getSuccessCriteriaExamples();
-    const messagesSuggestions = getKeyMessageSuggestions();
-
     return (
       <motion.div
         variants={fadeInUp}
@@ -2514,39 +2450,26 @@ const renderFormActions = () => {
           <ShareSection formId={formId} section="Campaign" />
         </div>
 
-        {/* Campaign Strategy Guide */}
-        <div className={`p-6 rounded-xl border-2 border-dashed ${theme === 'dark' ? 'border-orange-500/30 bg-orange-900/10' : 'border-orange-300 bg-orange-50'}`}>
-          <div className="flex items-start gap-4">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-orange-500/20' : 'bg-orange-100'}`}>
-              <Target className={`w-5 h-5 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`} />
-            </div>
-            <div className="flex-1">
-              <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-orange-400' : 'text-orange-700'} mb-2`}>Campaign Planning Tips</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Be Specific with Goals</h4>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Use numbers and timeframes. "Increase leads by 50% in 3 months" is better than "get more leads"
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Focus on Benefits</h4>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Your key messages should highlight how you solve customer problems, not just features
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <FormSection>
           <div className="space-y-8">
             {/* Campaign Basics */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Campaign Basics</h3>
-              
-              {/* Campaign Objective */}
+              <FormField
+                field={{
+                  label: "What would make this campaign successful for you?",
+                  name: "successCriteria",
+                  icon: Target,
+                  placeholder: "Describe what success looks like for this campaign",
+                  hint: "Be specific about your desired outcomes"
+                }}
+                value={campaign.successCriteria}
+                onChange={(e) => setCampaign(prev => ({ ...prev, successCriteria: e.target.value }))}
+                onBlur={handleBlur}
+                errors={errors}
+                touched={touched}
+                autoFocus={true}
+              />
               <FormField
                 field={{
                   label: "Campaign Objective",
@@ -2569,123 +2492,24 @@ const renderFormActions = () => {
                 onBlur={handleBlur}
                 errors={errors}
                 touched={touched}
-                autoFocus={true}
               />
-
-              {/* Success Criteria with Smart Examples */}
-              <div className="space-y-4">
-                <FormField
-                  field={{
-                    label: "What would make this campaign successful for you?",
-                    name: "successCriteria",
-                    icon: Target,
-                    placeholder: "Describe what success looks like for this campaign",
-                    hint: "Be specific about your desired outcomes"
-                  }}
-                  value={campaign.successCriteria}
-                  onChange={(e) => setCampaign(prev => ({ ...prev, successCriteria: e.target.value }))}
-                  onBlur={handleBlur}
-                  errors={errors}
-                  touched={touched}
-                />
-
-                {/* Smart examples based on selected objective */}
-                {campaign.objective && !campaign.successCriteria && (
-                  <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'border-green-500/30 bg-green-900/10' : 'border-green-300 bg-green-50'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <CheckCircle2 className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
-                        Example success criteria for {campaign.objective} campaigns:
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {successExamples.map((example, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setCampaign(prev => ({ ...prev, successCriteria: example }));
-                            setTouched(prev => ({ ...prev, successCriteria: true }));
-                          }}
-                          className={`block w-full text-left p-2 rounded border transition-colors ${
-                            theme === 'dark'
-                              ? 'border-green-500/30 text-green-300 hover:bg-green-500/10'
-                              : 'border-green-300 text-green-700 hover:bg-green-100'
-                          }`}
-                        >
-                          <span className="text-xs">💡</span> {example}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Campaign Content */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Campaign Content</h3>
-              
-              {/* Key Messages with Suggestions */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Key Messages</label>
-                  <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {campaign.keyMessages.split('\n').filter(m => m.trim()).length} messages
-                  </span>
+                <div>
+                  <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Key Messages</label>
+                  <TextArea
+                    name="keyMessages"
+                    value={campaign.keyMessages}
+                    onChange={(e) => setCampaign(prev => ({ ...prev, keyMessages: e.target.value }))}
+                    onBlur={(e) => handleBlur(e)}
+                    placeholder="Enter your key campaign messages (one per line)"
+                  />
                 </div>
 
-                {/* Message suggestions */}
-                {!campaign.keyMessages && businessDetails.type && (
-                  <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'border-blue-500/30 bg-blue-900/10' : 'border-blue-300 bg-blue-50'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <MessageSquare className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                        Suggested key messages for {businessDetails.type} businesses:
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {messagesSuggestions.map((message, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            const currentMessages = campaign.keyMessages ? campaign.keyMessages.split('\n').filter(m => m.trim()) : [];
-                            if (!currentMessages.includes(message)) {
-                              const newMessages = [...currentMessages, message].join('\n');
-                              setCampaign(prev => ({ ...prev, keyMessages: newMessages }));
-                            }
-                          }}
-                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                            theme === 'dark'
-                              ? 'border-blue-500/30 text-blue-300 hover:bg-blue-500/20'
-                              : 'border-blue-300 text-blue-700 hover:bg-blue-100'
-                          }`}
-                        >
-                          + {message}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <TextArea
-                  name="keyMessages"
-                  value={campaign.keyMessages}
-                  onChange={(e) => setCampaign(prev => ({ ...prev, keyMessages: e.target.value }))}
-                  
-                  placeholder="Enter your key campaign messages (one per line)&#10;Example:&#10;• Save 10 hours per week with our automation&#10;• Trusted by 10,000+ businesses worldwide&#10;• 30-day money-back guarantee"
-                />
-
-                {/* Key messages helper */}
-                {campaign.keyMessages && (
-                  <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} flex items-center gap-1`}>
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    {campaign.keyMessages.split('\n').filter(m => m.trim()).length} key messages added
-                  </div>
-                )}
-              </div>
-
-              {/* Call to Action with Examples */}
-              <div className="space-y-4">
                 <FormField
                   field={{
                     label: "Call to Action",
@@ -2700,87 +2524,8 @@ const renderFormActions = () => {
                   errors={errors}
                   touched={touched}
                 />
-
-                {/* CTA suggestions */}
-                {!campaign.callToAction && (
-                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50'}`}>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-                      <strong>Popular CTAs by objective:</strong>
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        'Get Started Free',
-                        'Book a Demo',
-                        'Download Now',
-                        'Learn More',
-                        'Sign Up Today',
-                        'Request Quote',
-                        'Try Free Trial',
-                        'Contact Sales'
-                      ].map((cta) => (
-                        <button
-                          key={cta}
-                          onClick={() => {
-                            setCampaign(prev => ({ ...prev, callToAction: cta }));
-                            setTouched(prev => ({ ...prev, callToAction: true }));
-                          }}
-                          className={`text-xs px-2 py-1 rounded border transition-colors ${
-                            theme === 'dark'
-                              ? 'border-gray-600 text-gray-400 hover:bg-gray-700'
-                              : 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                          }`}
-                        >
-                          {cta}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Campaign Preview */}
-            {(campaign.objective || campaign.successCriteria || campaign.keyMessages || campaign.callToAction) && (
-              <div className={`mt-8 p-6 rounded-xl border ${theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'}`}>
-                <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'} mb-4`}>Campaign Summary</h4>
-                <div className="space-y-3 text-sm">
-                  {campaign.objective && (
-                    <div>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Objective:</span>
-                      <span className={`ml-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {campaign.objective.charAt(0).toUpperCase() + campaign.objective.slice(1)}
-                      </span>
-                    </div>
-                  )}
-                  {campaign.successCriteria && (
-                    <div>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Success Criteria:</span>
-                      <span className={`ml-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {campaign.successCriteria}
-                      </span>
-                    </div>
-                  )}
-                  {campaign.keyMessages && (
-                    <div>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Key Messages:</span>
-                      <ul className={`ml-4 mt-1 space-y-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {campaign.keyMessages.split('\n').filter(m => m.trim()).map((message, index) => (
-                          <li key={index} className="text-sm">• {message}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {campaign.callToAction && (
-                    <div>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Call to Action:</span>
-                      <span className={`ml-2 px-3 py-1 rounded ${theme === 'dark' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'} text-sm font-medium`}>
-                        {campaign.callToAction}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </FormSection>
       </motion.div>

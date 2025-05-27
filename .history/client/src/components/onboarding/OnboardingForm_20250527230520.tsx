@@ -2671,7 +2671,12 @@ const renderFormActions = () => {
                   name="keyMessages"
                   value={campaign.keyMessages}
                   onChange={(e) => setCampaign(prev => ({ ...prev, keyMessages: e.target.value }))}
-                  
+                  onBlur={(e) => {
+                    const syntheticEvent = {
+                      target: { name: 'keyMessages', value: e.target.value }
+                    } as React.FocusEvent<HTMLInputElement>;
+                    handleBlur(syntheticEvent);
+                  }}
                   placeholder="Enter your key campaign messages (one per line)&#10;Example:&#10;• Save 10 hours per week with our automation&#10;• Trusted by 10,000+ businesses worldwide&#10;• 30-day money-back guarantee"
                 />
 

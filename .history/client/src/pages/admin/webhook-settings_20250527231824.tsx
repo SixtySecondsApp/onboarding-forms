@@ -507,7 +507,7 @@ export default function WebhookSettings() {
                     <Switch
                       id="emailNotifications"
                       checked={emailNotifications}
-                      onCheckedChange={(checked) => setEmailNotifications(checked)}
+                      onCheckedChange={setEmailNotifications}
                     />
                     <Label htmlFor="emailNotifications" className="font-medium">
                       Enable Email Notifications
@@ -546,7 +546,7 @@ export default function WebhookSettings() {
                     <Switch
                       id="slackEnabled"
                       checked={slackEnabled}
-                      onCheckedChange={(checked) => setSlackEnabled(checked)}
+                      onCheckedChange={setSlackEnabled}
                     />
                     <Label htmlFor="slackEnabled" className="font-medium">
                       Enable Slack Notifications
