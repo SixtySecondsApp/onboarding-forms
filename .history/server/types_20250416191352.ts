@@ -36,7 +36,6 @@ export interface IStorage {
   sendSubmissionWebhookNotification(formId: number, data: any): Promise<boolean>;
   sendSectionWebhookNotification(formId: number, sectionId: number, sectionData: any, sectionName: string): Promise<boolean>;
   sendFormCompletionWebhookNotification(formId: number): Promise<boolean>;
-  sendFormUpdatedWebhookNotification(formId: number, newData: any, oldData: any): Promise<boolean>;
   
   // Form submission operations
   createSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;

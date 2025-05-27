@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertFormSchema, insertSectionSchema, businessDetailsSchema, webhookSettingsSchema, insertFormSubmissionSchema, type SystemSettings } from "@shared/schema";
+import { insertFormSchema, insertSectionSchema, businessDetailsSchema, webhookSettingsSchema, insertFormSubmissionSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 
@@ -192,9 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const submission = await storage.createSubmission(submissionData);
       
       // Send webhook notification if enabled
-      if (submissionData.formId) {
-        await storage.sendWebhookNotification(parseInt(submissionData.formId.toString(), 10), submissionData.submissionData);
-      }
+      await storage.sendWebhookNotification(submissionData.formId, submissionData.submissionData);
       
       res.json(submission);
     } catch (error) {

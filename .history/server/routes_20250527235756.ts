@@ -192,9 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const submission = await storage.createSubmission(submissionData);
       
       // Send webhook notification if enabled
-      if (submissionData.formId) {
-        await storage.sendWebhookNotification(parseInt(submissionData.formId.toString(), 10), submissionData.submissionData);
-      }
+      await storage.sendWebhookNotification(submissionData.formId, submissionData.submissionData);
       
       res.json(submission);
     } catch (error) {

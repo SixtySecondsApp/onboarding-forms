@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -582,6 +583,362 @@ export default function AdminDashboard() {
                               <User className="w-5 h-5 text-muted-foreground" />
                             </div>
                             <div>
+import { AdminLayout } from '@/components/layouts/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
+import { getForms, createForm, updateForm, deleteForm, type Form } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/lib/theme-context';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  MoreHorizontal, 
+  Eye, 
+  Copy, 
+  Send, 
+  Trash2, 
+  Lock, 
+  Unlock,
+  Calendar,
+  Users,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  BarChart3,
+  Activity,
+  FileText,
+  Mail,
+  ExternalLink,
+  Settings,
+  RefreshCw,
+  SortAsc,
+  SortDesc,
+  ChevronDown,
+  User,
+  Building2,
+  Target,
+  Zap
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+
+export default function AdminDashboard() {
+  const { theme } = useTheme();
+  const { toast } = useToast();
+  
+  // State management
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'progress' | 'status'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [selectedForm, setSelectedForm] = useState<Form | null>(null);
+  const [newFormData, setNewFormData] = useState({
+    client_name: '',
+    client_email: '',
+    password: ''
+  });
+
+  // Data fetching
+  const { data: forms = [], isLoading, refetch } = useQuery({
+    queryKey: ['forms'],
+    queryFn: getForms,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
+  // Mutations
+  const createFormMutation = useMutation({
+    mutationFn: createForm,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forms'] });
+      setShowCreateDialog(false);
+      setNewFormData({ client_name: '', client_email: '', password: '' });
+      toast({
+        title: "Form created successfully",
+        description: "The onboarding form has been created and is ready to send.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error creating form",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateFormMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Form> }) => updateForm(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forms'] });
+      toast({
+        title: "Form updated successfully",
+        description: "The form has been updated.",
+      });
+    },
+  });
+
+  const deleteFormMutation = useMutation({
+    mutationFn: deleteForm,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forms'] });
+      setShowDeleteDialog(false);
+      setSelectedForm(null);
+      toast({
+        title: "Form deleted successfully",
+        description: "The form has been permanently deleted.",
+      });
+    },
+  });
+
+  // Analytics calculations
+  const analytics = React.useMemo(() => {
+    const totalForms = forms.length;
+    const completedForms = forms.filter(f => f.status === 'completed').length;
+    const inProgressForms = forms.filter(f => f.status === 'in_progress').length;
+    const pendingForms = forms.filter(f => f.status === 'pending').length;
+    
+    const completionRate = totalForms > 0 ? Math.round((completedForms / totalForms) * 100) : 0;
+    const averageProgress = totalForms > 0 ? Math.round(forms.reduce((sum, form) => sum + form.progress, 0) / totalForms) : 0;
+    
+    // Recent activity (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentActivity = forms.filter(f => new Date(f.updated_at) > sevenDaysAgo).length;
+    
+    return {
+      totalForms,
+      completedForms,
+      inProgressForms,
+      pendingForms,
+      completionRate,
+      averageProgress,
+      recentActivity
+    };
+  }, [forms]);
+
+  // Filtering and sorting
+  const filteredAndSortedForms = React.useMemo(() => {
+    let filtered = forms.filter(form => {
+      const matchesSearch = form.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           form.client_email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || form.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortBy) {
+        case 'name':
+          aValue = a.client_name.toLowerCase();
+          bValue = b.client_name.toLowerCase();
+          break;
+        case 'progress':
+          aValue = a.progress;
+          bValue = b.progress;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+    return filtered;
+  }, [forms, searchTerm, filterStatus, sortBy, sortOrder]);
+
+  // Event handlers
+  const handleLogout = async () => {
+    // Implement logout logic
+    window.location.href = '/admin/auth';
+  };
+
+  const getFormUrl = (form: Form) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/onboarding/${form.slug || form.id}`;
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFormData.client_name || !newFormData.client_email) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in both client name and email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createFormMutation.mutate({
+      client_name: newFormData.client_name,
+      client_email: newFormData.client_email,
+      status: 'pending',
+      progress: 0,
+      data: {},
+      password: newFormData.password || null,
+    });
+  };
+
+  const sendReminder = async (formId: string) => {
+    try {
+      const response = await fetch(`/api/forms/${formId}/remind`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        await updateFormMutation.mutateAsync({
+          id: formId,
+          data: { last_reminder: new Date().toISOString() }
+        });
+        toast({
+          title: "Reminder sent",
+          description: "Email reminder has been sent to the client.",
+        });
+      } else {
+        throw new Error('Failed to send reminder');
+      }
+    } catch (error) {
+      toast({
+        title: "Error sending reminder",
+        description: "Failed to send the reminder email.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyFormUrl = (form: Form) => {
+    const url = getFormUrl(form);
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "URL copied",
+      description: "Form URL has been copied to clipboard.",
+    });
+  };
+
+  const openForm = (form: Form) => {
+    const url = getFormUrl(form);
+    window.open(url, '_blank');
+  };
+
+  const handleDeleteForm = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    setSelectedForm(form);
+    setShowDeleteDialog(true);
+  };
+
+  const handleToggleFormStatus = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    const newStatus = form.is_disabled ? false : true;
+    updateFormMutation.mutate({
+      id: form.id,
+      data: { is_disabled: newStatus }
+    });
+  };
+
+  const handleSetFormPassword = (e: React.MouseEvent, form: Form) => {
+    e.stopPropagation();
+    setSelectedForm(form);
+    setShowPasswordDialog(true);
+  };
+
+  const confirmDeleteForm = () => {
+    if (selectedForm) {
+      deleteFormMutation.mutate(selectedForm.id);
+    }
+  };
+
+  const confirmSetPassword = () => {
+    if (selectedForm) {
+      updateFormMutation.mutate({
+        id: selectedForm.id,
+        data: { password: newFormData.password || null }
+      });
+      setShowPasswordDialog(false);
+      setNewFormData(prev => ({ ...prev, password: '' }));
+    }
+  };
+
+  const getStatusBadge = (form: Form) => {
+    const variants = {
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    };
+    
+    const icons = {
+      pending: Clock,
+      in_progress: Activity,
+      completed: CheckCircle2
+    };
+    
+    const Icon = icons[form.status];
+    
+    return (
+      <Badge className={`${variants[form.status]} border-0 font-medium`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {form.status.replace('_', ' ')}
+      </Badge>
+    );
+  };
+
+  const exportData = () => {
+    const csvContent = [
+      ['Client Name', 'Email', 'Status', 'Progress', 'Created', 'Last Updated'],
+      ...filteredAndSortedForms.map(form => [
+        form.client_name,
+        form.client_email,
+        form.status,
+        `${form.progress}%`,
+        new Date(form.created_at).toLocaleDateString(),
+        new Date(form.updated_at).toLocaleDateString()
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `onboarding-forms-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <AdminLayout>
+      <div className="min-h-screen -m-6">
                               <div className="font-medium">{form.client_name}</div>
                               <div className="text-sm text-muted-foreground">{form.client_email}</div>
                             </div>
@@ -803,4 +1160,5 @@ export default function AdminDashboard() {
       </Dialog>
     </AdminLayout>
   );
-} 
+}
+}

@@ -330,7 +330,7 @@ describe('System-wide Webhook Functionality', () => {
 
   it('should handle form updated webhook errors gracefully', async () => {
     // Mock axios to throw an error
-    (axios.post as any).mockRejectedValueOnce(new Error('Network error'));
+    (axios.post as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
     const oldData = { test: 'old' };
     const newData = { test: 'new' };

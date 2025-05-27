@@ -511,35 +511,11 @@ export default function WebhookSettings() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between p-2 rounded border">
                         <span className="text-sm font-mono">form.completed</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">Active</Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={testWebhook}
-                            disabled={!webhookUrl || isTestingWebhook}
-                          >
-                            Test
-                          </Button>
-                        </div>
+                        <Badge variant="secondary">Active</Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 rounded border">
                         <span className="text-sm font-mono">form.updated</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">Active</Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={testFormUpdatedWebhook}
-                            disabled={!webhookUrl}
-                          >
-                            Test
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-2 rounded border">
-                        <span className="text-sm font-mono">section.completed</span>
-                        <Badge variant="outline">Available</Badge>
+                        <Badge variant="outline">Coming Soon</Badge>
                       </div>
                     </div>
                   </div>

@@ -101,28 +101,12 @@ export class SupabaseStorage implements IStorage {
   }
 
   async updateFormData(id: number, data: any): Promise<void> {
-    // Get the current form data before updating
-    const currentForm = await this.getForm(id);
-    
     const { error } = await this.supabase
       .from('forms')
       .update({ data })
       .eq('id', id);
 
     if (error) throw error;
-    
-    // After updating form data, check if we should send a webhook notification
-    try {
-      const settings = await this.getWebhookSettings();
-      
-      // If webhook is enabled and form.updated notifications are enabled, send the webhook
-      if (settings.webhookEnabled && settings.webhookUrl) {
-        await this.sendFormUpdatedWebhookNotification(id, data, currentForm?.data || {});
-      }
-    } catch (webhookError) {
-      console.error('Error sending form.updated webhook notification:', webhookError);
-      // Don't throw the error to avoid breaking the form update
-    }
   }
 
   async updateLastReminder(id: number): Promise<void> {
@@ -547,56 +531,6 @@ export class SupabaseStorage implements IStorage {
 
     if (error) throw error;
     return data;
-  }
-
-  // New method to send form.updated webhook notifications
-  async sendFormUpdatedWebhookNotification(formId: number, newData: any, oldData: any): Promise<boolean> {
-    try {
-      // Get the global webhook settings
-      const { data: settings, error } = await this.supabase
-        .from('system_settings')
-        .select('webhook_url, webhook_enabled, webhook_secret')
-        .order('id', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      
-      // If webhook is not enabled or URL is not set, skip
-      if (!settings.webhook_enabled || !settings.webhook_url) {
-        return false;
-      }
-
-      // Prepare the payload
-      const payload = {
-        event: 'form_updated',
-        form_id: formId,
-        new_data: newData,
-        old_data: oldData,
-        timestamp: new Date().toISOString()
-      };
-
-      // Generate signature if secret is available
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-
-      if (settings.webhook_secret) {
-        const signature = crypto
-          .createHmac('sha256', settings.webhook_secret)
-          .update(JSON.stringify(payload))
-          .digest('hex');
-        
-        headers['X-Webhook-Signature'] = signature;
-      }
-
-      // Send the webhook
-      await axios.post(settings.webhook_url, payload, { headers });
-      return true;
-    } catch (error) {
-      console.error('Error sending form.updated webhook notification:', error);
-      return false;
-    }
   }
 }
 

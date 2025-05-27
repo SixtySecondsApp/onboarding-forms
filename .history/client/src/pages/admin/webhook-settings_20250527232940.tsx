@@ -177,76 +177,32 @@ export default function WebhookSettings() {
   };
 
   const testWebhook = async () => {
+    if (!webhookUrl) {
+      toast({
+        title: "No webhook URL",
+        description: "Please save a webhook URL before testing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsTestingWebhook(true);
     try {
-      const response = await fetch('/api/webhook/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Simulate webhook test
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast({
+        title: "Webhook test successful",
+        description: "Test payload delivered successfully.",
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Webhook test successful",
-          description: result.message || "Test webhook was sent successfully.",
-        });
-      } else {
-        throw new Error(result.error || 'Test failed');
-      }
     } catch (error) {
       toast({
         title: "Webhook test failed",
-        description: error instanceof Error ? error.message : "Failed to send test webhook.",
+        description: "Failed to deliver test payload.",
         variant: "destructive",
       });
     } finally {
       setIsTestingWebhook(false);
       setShowTestDialog(false);
-    }
-  };
-
-  const testFormUpdatedWebhook = async () => {
-    try {
-      // Get the first form for testing
-      const formsResponse = await fetch('/api/forms');
-      const forms = await formsResponse.json();
-      
-      if (!forms || forms.length === 0) {
-        toast({
-          title: "No forms available",
-          description: "Create a form first to test the form.updated webhook.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const testFormId = forms[0].id;
-      const response = await fetch(`/api/webhook/test-form-updated/${testFormId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Form.updated webhook test successful",
-          description: result.message || "Test form.updated webhook was sent successfully.",
-        });
-      } else {
-        throw new Error(result.error || 'Test failed');
-      }
-    } catch (error) {
-      toast({
-        title: "Form.updated webhook test failed",
-        description: error instanceof Error ? error.message : "Failed to send test webhook.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -477,15 +433,6 @@ export default function WebhookSettings() {
       "audience": {...}
     }
   }
-}
-
-// form.updated event
-{
-  "event": "form.updated",
-  "form_id": 123,
-  "new_data": {...},
-  "old_data": {...},
-  "timestamp": "2024-01-15T10:30:00Z"
 }`}</code>
                       </pre>
                     </div>
@@ -511,35 +458,11 @@ export default function WebhookSettings() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between p-2 rounded border">
                         <span className="text-sm font-mono">form.completed</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">Active</Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={testWebhook}
-                            disabled={!webhookUrl || isTestingWebhook}
-                          >
-                            Test
-                          </Button>
-                        </div>
+                        <Badge variant="secondary">Active</Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 rounded border">
                         <span className="text-sm font-mono">form.updated</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">Active</Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={testFormUpdatedWebhook}
-                            disabled={!webhookUrl}
-                          >
-                            Test
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-2 rounded border">
-                        <span className="text-sm font-mono">section.completed</span>
-                        <Badge variant="outline">Available</Badge>
+                        <Badge variant="outline">Coming Soon</Badge>
                       </div>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertFormSchema, insertSectionSchema, businessDetailsSchema, webhookSettingsSchema, insertFormSubmissionSchema, type SystemSettings } from "@shared/schema";
+import { insertFormSchema, insertSectionSchema, businessDetailsSchema, webhookSettingsSchema, insertFormSubmissionSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 
@@ -192,9 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const submission = await storage.createSubmission(submissionData);
       
       // Send webhook notification if enabled
-      if (submissionData.formId) {
-        await storage.sendWebhookNotification(parseInt(submissionData.formId.toString(), 10), submissionData.submissionData);
-      }
+      await storage.sendWebhookNotification(submissionData.formId, submissionData.submissionData);
       
       res.json(submission);
     } catch (error) {
@@ -252,124 +250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("/api/forms/:id/complete error", error);
       res.status(500).json({ error: "Failed to trigger completion webhook" });
-    }
-  });
-
-  // Webhook testing endpoints
-  app.post("/api/webhook/test", async (req, res) => {
-    try {
-      const settings = await storage.getWebhookSettings();
-      
-      if (!settings.webhookEnabled || !settings.webhookUrl) {
-        res.status(400).json({ error: "Webhook not configured or disabled" });
-        return;
-      }
-
-      // Create a test payload
-      const testPayload = {
-        event: 'webhook.test',
-        timestamp: new Date().toISOString(),
-        data: {
-          message: 'This is a test webhook from your onboarding forms system',
-          test_id: Math.random().toString(36).substring(7)
-        }
-      };
-
-      // Generate signature if secret is available
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-
-      if (settings.webhookSecret) {
-        const crypto = require('crypto');
-        const signature = crypto
-          .createHmac('sha256', settings.webhookSecret)
-          .update(JSON.stringify(testPayload))
-          .digest('hex');
-        
-        headers['X-Webhook-Signature'] = signature;
-      }
-
-      // Send the test webhook
-      const axios = require('axios');
-      await axios.post(settings.webhookUrl, testPayload, { 
-        headers,
-        timeout: 10000 // 10 second timeout
-      });
-
-      res.json({ success: true, message: "Test webhook sent successfully" });
-    } catch (error) {
-      console.error("Webhook test error:", error);
-      res.status(500).json({ 
-        error: "Failed to send test webhook", 
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Test form.updated webhook
-  app.post("/api/webhook/test-form-updated/:id", async (req, res) => {
-    try {
-      const formId = parseInt(req.params.id, 10);
-      
-      if (Number.isNaN(formId)) {
-        res.status(400).json({ error: "Invalid form id" });
-        return;
-      }
-
-      const form = await storage.getForm(formId);
-      if (!form) {
-        res.status(404).json({ error: "Form not found" });
-        return;
-      }
-
-      // Create mock old and new data for testing
-      const oldData = form.data || {};
-      const newData = {
-        ...oldData,
-        testUpdate: {
-          timestamp: new Date().toISOString(),
-          message: "This is a test form.updated webhook"
-        }
-      };
-
-      const success = await storage.sendFormUpdatedWebhookNotification(formId, newData, oldData);
-
-      if (!success) {
-        res.json({ success: false, message: "Webhook not sent (disabled or mis-configured)." });
-        return;
-      }
-
-      res.json({ success: true, message: "Test form.updated webhook sent successfully" });
-    } catch (error) {
-      console.error("Form updated webhook test error:", error);
-      res.status(500).json({ 
-        error: "Failed to send test form.updated webhook", 
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Update form data endpoint with webhook trigger
-  app.patch("/api/forms/:id/data", async (req, res) => {
-    try {
-      const formId = parseInt(req.params.id, 10);
-      
-      if (Number.isNaN(formId)) {
-        res.status(400).json({ error: "Invalid form id" });
-        return;
-      }
-
-      const data = req.body;
-      await storage.updateFormData(formId, data);
-      
-      res.json({ success: true, message: "Form data updated successfully" });
-    } catch (error) {
-      console.error("Form data update error:", error);
-      res.status(500).json({ 
-        error: "Failed to update form data", 
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
     }
   });
 
