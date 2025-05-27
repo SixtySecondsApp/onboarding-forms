@@ -1257,6 +1257,15 @@ export function OnboardingForm({ formId, sectionId }: Props) {
         
         // Show completion screen with confetti
         setIsCompleted(true);
+
+        // Fire-and-forget request to backend to trigger the form-completion webhook
+        // We don't await this call so the UI remains responsive. Any error is logged
+        // silently – users don't need to know the webhook delivery status.
+        fetch(`/api/forms/${formId}/complete`, {
+          method: "POST"
+        }).catch(err => {
+          console.error("Failed to trigger completion webhook", err);
+        });
       } else {
         // Show section completion message and move to next section
         toast({

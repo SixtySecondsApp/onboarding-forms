@@ -233,42 +233,89 @@ export class SupabaseStorage implements IStorage {
       .select('*')
       .order('id', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle no-row case gracefully
 
-    if (error) throw error;
+    // If there's an error (and it's not a PostgREST error for no rows, though maybeSingle handles that)
+    if (error) {
+      console.error("Error fetching webhook settings:", error);
+      // Fallback to default settings on error to prevent downstream issues
+      return {
+        id: 0, // Or handle ID appropriately if it needs to be valid/non-default
+        webhookUrl: null, // Or ""
+        webhookEnabled: false,
+        webhookSecret: null, // Or ""
+        notifyOnSectionCompletion: false,
+        notifyOnFormCompletion: true, // Default as per schema
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+
+    // If no data is returned (e.g., table is empty), return default settings
+    if (!data) {
+      return {
+        id: 0, // Or handle ID appropriately
+        webhookUrl: null,
+        webhookEnabled: false,
+        webhookSecret: null,
+        notifyOnSectionCompletion: false,
+        notifyOnFormCompletion: true,
+        createdAt: new Date(), // These might not be strictly necessary for GET but good for consistency
+        updatedAt: new Date(),
+      };
+    }
+
     return data;
   }
 
-  async updateWebhookSettings(settings: { webhookUrl?: string, webhookEnabled?: boolean, webhookSecret?: string }): Promise<void> {
-    // Always update the first record (we only have one)
-    const { data: existingSettings } = await this.supabase
+  async updateWebhookSettings(settings: Partial<Omit<SystemSettings, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
+    const { data: existingSettings, error: fetchError } = await this.supabase
       .from('system_settings')
       .select('id')
       .order('id', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Error fetching existing settings for update:", fetchError);
+      throw fetchError; // Propagate error if fetching fails
+    }
+
+    const dataToUpsert = {
+      webhookUrl: settings.webhookUrl === undefined ? null : settings.webhookUrl,
+      webhookEnabled: settings.webhookEnabled === undefined ? false : settings.webhookEnabled,
+      webhookSecret: settings.webhookSecret === undefined ? null : settings.webhookSecret,
+      notifyOnSectionCompletion: settings.notifyOnSectionCompletion === undefined ? false : settings.notifyOnSectionCompletion,
+      notifyOnFormCompletion: settings.notifyOnFormCompletion === undefined ? true : settings.notifyOnFormCompletion,
+      updated_at: new Date().toISOString(),
+    };
 
     if (!existingSettings) {
-      // If no settings exist, create a new record
-      const { error } = await this.supabase
+      // If no settings exist, create a new record with all fields, applying defaults
+      const { error: insertError } = await this.supabase
         .from('system_settings')
         .insert({
-          ...settings,
-          updated_at: new Date().toISOString()
+          ...dataToUpsert,
+          // Default values for fields not in settings, if any, can be added here
+          // or rely on database defaults if defined in schema
         });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("Error inserting new webhook settings:", insertError);
+        throw insertError;
+      }
     } else {
-      // Update the existing record
-      const { error } = await this.supabase
+      // Update the existing record, only setting fields that are explicitly passed in settings
+      // However, our dataToUpsert is now complete with defaults for undefined optional fields
+      const { error: updateError } = await this.supabase
         .from('system_settings')
-        .update({
-          ...settings,
-          updated_at: new Date().toISOString()
-        })
+        .update(dataToUpsert) // Use the prepared object
         .eq('id', existingSettings.id);
 
-      if (error) throw error;
+      if (updateError) {
+        console.error("Error updating webhook settings:", updateError);
+        throw updateError;
+      }
     }
   }
 

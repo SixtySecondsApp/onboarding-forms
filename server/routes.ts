@@ -112,35 +112,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook settings routes - updated for system-wide settings
   app.get("/api/webhook-settings", async (req, res) => {
     try {
-      const settings = await storage.getWebhookSettings();
+      const settings = await storage.getWebhookSettings(); // This now returns a full SystemSettings object or defaults
       
-      // Return the webhook settings
+      // Return the webhook settings, ensuring url and secret are strings for the client
       res.json({
         webhookUrl: settings.webhookUrl || "",
-        webhookEnabled: settings.webhookEnabled || false,
-        webhookSecret: settings.webhookSecret || ""
+        webhookEnabled: settings.webhookEnabled === null ? false : settings.webhookEnabled, // handle null from DB if not set by new defaults yet
+        webhookSecret: settings.webhookSecret || "",
+        notifyOnSectionCompletion: settings.notifyOnSectionCompletion === null ? false : settings.notifyOnSectionCompletion,
+        notifyOnFormCompletion: settings.notifyOnFormCompletion === null ? true : settings.notifyOnFormCompletion,
       });
     } catch (error) {
-      res.status(500).json({ error: "Internal server error" });
+      // The storage.getWebhookSettings should ideally not throw anymore if it returns defaults on error.
+      // However, if it does due to an unexpected issue, this catch block will handle it.
+      console.error("Error in /api/webhook-settings GET route:", error);
+      res.status(500).json({ error: "Internal server error retrieving webhook settings" });
     }
   });
 
   app.post("/api/webhook-settings", async (req, res) => {
     try {
-      const settings = webhookSettingsSchema.parse(req.body);
-      
-      // Generate a new secret if requested
-      if (req.query.generateSecret === "true") {
-        settings.webhookSecret = await storage.generateWebhookSecret();
+      // Validate incoming data. Schema allows optional webhookSecret.
+      const validatedSettings = webhookSettingsSchema.parse(req.body);
+      let finalSettings: Partial<Omit<SystemSettings, 'id' | 'createdAt' | 'updatedAt'>> = {
+        webhookUrl: validatedSettings.webhookUrl,
+        webhookEnabled: validatedSettings.webhookEnabled,
+        // webhookSecret is optional, pass it if present, otherwise storage will handle default (null)
+        notifyOnSectionCompletion: validatedSettings.notifyOnSectionCompletion,
+        notifyOnFormCompletion: validatedSettings.notifyOnFormCompletion,
+      };
+
+      if (validatedSettings.webhookSecret !== undefined) {
+        finalSettings.webhookSecret = validatedSettings.webhookSecret;
       }
       
-      await storage.updateWebhookSettings(settings);
-      res.json({ success: true, ...settings });
+      // Generate a new secret if requested, overriding any secret from body
+      if (req.query.generateSecret === "true") {
+        finalSettings.webhookSecret = await storage.generateWebhookSecret();
+      }
+      
+      await storage.updateWebhookSettings(finalSettings);
+      
+      // Return the state as it should be in the DB (secret might be null)
+      // The client expects strings, so convert nulls to empty strings for url/secret here.
+      const currentSettings = await storage.getWebhookSettings();
+      res.json({
+        success: true,
+        webhookUrl: currentSettings.webhookUrl || "",
+        webhookEnabled: currentSettings.webhookEnabled || false,
+        webhookSecret: currentSettings.webhookSecret || "",
+        notifyOnSectionCompletion: currentSettings.notifyOnSectionCompletion || false,
+        notifyOnFormCompletion: currentSettings.notifyOnFormCompletion === null ? true : currentSettings.notifyOnFormCompletion,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: fromZodError(error).message });
       } else {
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Error in /api/webhook-settings POST route:", error);
+        res.status(500).json({ error: "Internal server error updating webhook settings" });
       }
     }
   });
@@ -192,6 +221,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submissions);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/forms/:id/complete", async (req, res) => {
+    try {
+      const formIdParam = req.params.id;
+      // The existing storage implementation expects a number ID. If your IDs are UUIDs
+      // you can remove the parseInt call below. For now we keep the original behaviour
+      // for consistency with the rest of the codebase.
+      const formId = parseInt(formIdParam, 10);
+
+      if (Number.isNaN(formId)) {
+        res.status(400).json({ error: "Invalid form id" });
+        return;
+      }
+
+      const success = await storage.sendFormCompletionWebhookNotification(formId);
+
+      if (!success) {
+        // The webhook call can legitimately return false (e.g. disabled). We still
+        // return 200 to the client but include the success flag for transparency.
+        res.json({ success: false, message: "Webhook not sent (disabled or mis-configured)." });
+        return;
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("/api/forms/:id/complete error", error);
+      res.status(500).json({ error: "Failed to trigger completion webhook" });
     }
   });
 
