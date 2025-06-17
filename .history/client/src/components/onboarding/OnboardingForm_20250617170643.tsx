@@ -882,21 +882,28 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // Handle different form sections
-    if (name === "successCriteria" || name === "objective" || name === "keyMessages" || name === "callToAction") {
-      setCampaign(prev => ({ ...prev, [name]: value }));
-    } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
-      setAudience(prev => ({ ...prev, [name]: value }));
-    } else {
-      // For business details, including phone number - no formatting on change to allow natural typing
+    // Format phone number as the user types
+    if (name === 'phone') {
+      const formattedValue = formatPhoneNumber(value);
       setBusinessDetails(prev => ({
         ...prev,
-        [name]: value
+        [name]: formattedValue
       }));
+    } else {
+      if (name === "successCriteria" || name === "objective" || name === "keyMessages" || name === "callToAction") {
+        setCampaign(prev => ({ ...prev, [name]: value }));
+      } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
+        setAudience(prev => ({ ...prev, [name]: value }));
+      } else {
+        setBusinessDetails(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      }
     }
 
     // Validate on change and set touched
-    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value);
+    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
     setErrors(prev => ({
       ...prev,
       [name]: error

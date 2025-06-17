@@ -859,12 +859,12 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Update steps with current status using useMemo
   const steps = useMemo(() => [
-    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0), subtitle: 'Company information' },
-    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1), subtitle: 'Goals and objectives' },
-    { id: 3, title: 'Target Audience', icon: Users, status: getStepStatus(2), subtitle: 'Ideal customer profile' },
-    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3), subtitle: 'Fonts and styles' },
-    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4), subtitle: 'Logo, colors, etc.' },
-    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5), subtitle: 'Connect your tools' }
+    { id: 1, title: 'Business Details', icon: Building2, status: getStepStatus(0) },
+    { id: 2, title: 'Campaign', icon: Target, status: getStepStatus(1) },
+    { id: 3, title: 'Target Audience', icon: Users, status: getStepStatus(2) },
+    { id: 4, title: 'Typography', icon: Type, status: getStepStatus(3) },
+    { id: 5, title: 'Brand Assets', icon: Palette, status: getStepStatus(4) },
+    { id: 6, title: 'System Integration', icon: Settings, status: getStepStatus(5) }
   ], [completedSteps, currentStep]);
 
   // Load completed steps from form data when component mounts
@@ -882,21 +882,28 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    // Handle different form sections
-    if (name === "successCriteria" || name === "objective" || name === "keyMessages" || name === "callToAction") {
-      setCampaign(prev => ({ ...prev, [name]: value }));
-    } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
-      setAudience(prev => ({ ...prev, [name]: value }));
-    } else {
-      // For business details, including phone number - no formatting on change to allow natural typing
+    // Format phone number as the user types
+    if (name === 'phone') {
+      const formattedValue = formatPhoneNumber(value);
       setBusinessDetails(prev => ({
         ...prev,
-        [name]: value
+        [name]: formattedValue
       }));
+    } else {
+      if (name === "successCriteria" || name === "objective" || name === "keyMessages" || name === "callToAction") {
+        setCampaign(prev => ({ ...prev, [name]: value }));
+      } else if (name === "jobTitles" || name === "industries" || name === "companySize" || name === "locations") {
+        setAudience(prev => ({ ...prev, [name]: value }));
+      } else {
+        setBusinessDetails(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      }
     }
 
     // Validate on change and set touched
-    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value);
+    const error = validateField(name as keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", name === 'phone' ? formatPhoneNumber(value) : value);
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -1306,7 +1313,7 @@ const renderFormActions = () => {
   };
 
   const renderBusinessInfoForm = () => {
-    const businessTypeSuggestion = getBusinessTypeSuggestion(businessDetails.website || '');
+    const businessTypeSuggestion = getBusinessTypeSuggestion(businessDetails.website);
     
     return (
       <motion.div
@@ -3441,7 +3448,7 @@ const renderFormActions = () => {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Auto-save effect - fix the glitch by not invalidating queries during auto-save
+  // Auto-save effect
   useEffect(() => {
     const autoSave = async () => {
       if (autoSaveStatus === 'saving') return; // Prevent multiple saves
@@ -3457,17 +3464,7 @@ const renderFormActions = () => {
           completedSteps
         };
 
-        // Save directly to Supabase without using the mutation to avoid query invalidation
-        await supabase
-          .from('forms')
-          .update({
-            data: {
-              ...(form?.data || {}),
-              ...formData
-            }
-          })
-          .eq('id', formId);
-
+        await updateFormMutation.mutateAsync(formData);
         setLastSaved(new Date());
         setAutoSaveStatus('saved');
         
@@ -3483,7 +3480,7 @@ const renderFormActions = () => {
     // Debounce auto-save by 2 seconds
     const timeoutId = setTimeout(autoSave, 2000);
     return () => clearTimeout(timeoutId);
-  }, [businessDetails, campaign, audience, typography, brandAssets, formId]);
+  }, [businessDetails, campaign, audience, typography, brandAssets]);
 
   // Add smart suggestions for business types based on website
   const getBusinessTypeSuggestion = (website: string) => {
