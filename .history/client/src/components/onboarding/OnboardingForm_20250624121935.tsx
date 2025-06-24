@@ -124,7 +124,7 @@ const formatPhoneNumber = (value: string) => {
 
 interface FormField {
   label: string;
-  name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData;
+  name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize";
   icon: any;
   placeholder: string;
   type?: string;
@@ -250,7 +250,7 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData, value: string) => {
+const validateField = (name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
 
   switch (name) {
@@ -845,19 +845,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load typography data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.typography) {
-      setTypography((section.data as any).typography);
-    } else if (form?.data && (form.data as any)?.typography) {
-      setTypography((form.data as any).typography);
+    if (sectionId && section?.data && 'typography' in section.data) {
+      setTypography(section.data.typography as TypographyData);
+    } else if (form?.data && 'typography' in form.data) {
+      setTypography(form.data.typography as TypographyData);
     }
   }, [form, section, sectionId]);
 
   // Load brand assets data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.brandAssets) {
-      setBrandAssets((section.data as any).brandAssets);
-    } else if (form?.data && (form.data as any)?.brandAssets) {
-      setBrandAssets((form.data as any).brandAssets);
+    if (sectionId && section?.data && 'brandAssets' in section.data) {
+      setBrandAssets(section.data.brandAssets as BrandAssetsData);
+    } else if (form?.data && 'brandAssets' in form.data) {
+      setBrandAssets(form.data.brandAssets as BrandAssetsData);
     }
   }, [form, section, sectionId]);
 
@@ -883,8 +883,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load completed steps from form data when component mounts
   useEffect(() => {
-    if (form?.data && typeof form.data === 'object' && (form.data as any)?.completedSteps && Array.isArray((form.data as any).completedSteps)) {
-      const loadedSteps = (form.data as any).completedSteps as number[];
+    if (form?.data?.completedSteps) {
+      const loadedSteps = form.data.completedSteps;
       setCompletedSteps(loadedSteps);
       
       // Recalculate progress immediately
@@ -972,12 +972,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const validateBusinessInfo = () => {
     const errors: Record<string, string> = {};
     for (const field of formFields) {
-      // Only validate business detail fields for business info
-      if (field.name in businessDetails) {
-        const error = validateField(field.name, businessDetails[field.name as keyof BusinessDetails] || '');
-        if (error) {
-          errors[field.name] = error;
-        }
+      const error = validateField(field.name, businessDetails[field.name]);
+      if (error) {
+        errors[field.name] = error;
       }
     }
     return errors;
@@ -1440,7 +1437,7 @@ const renderFormActions = () => {
                 <FormField
                   key="website"
                   field={formFields[2]} // Website
-                  value={businessDetails.website || ''}
+                  value={businessDetails.website}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1489,7 +1486,7 @@ const renderFormActions = () => {
                     ...formFields[3], // LinkedIn
                     placeholder: "https://linkedin.com/company/your-company"
                   }}
-                  value={businessDetails.linkedin || ''}
+                  value={businessDetails.linkedin}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -3957,7 +3954,7 @@ interface TypographyData {
   customBodyFont: string;
 }
 
-interface BrandAssets {
+interface BrandAssetsData {
   brandName: string;
   logo: File | null;
   mainColor: string;

@@ -250,7 +250,7 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData, value: string) => {
+const validateField = (name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
 
   switch (name) {
@@ -1440,7 +1440,7 @@ const renderFormActions = () => {
                 <FormField
                   key="website"
                   field={formFields[2]} // Website
-                  value={businessDetails.website || ''}
+                  value={businessDetails.website}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1489,7 +1489,7 @@ const renderFormActions = () => {
                     ...formFields[3], // LinkedIn
                     placeholder: "https://linkedin.com/company/your-company"
                   }}
-                  value={businessDetails.linkedin || ''}
+                  value={businessDetails.linkedin}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}

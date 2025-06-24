@@ -124,7 +124,7 @@ const formatPhoneNumber = (value: string) => {
 
 interface FormField {
   label: string;
-  name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData;
+  name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize";
   icon: any;
   placeholder: string;
   type?: string;
@@ -250,7 +250,7 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData, value: string) => {
+const validateField = (name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
 
   switch (name) {
@@ -621,25 +621,14 @@ export function OnboardingForm({ formId, sectionId }: Props) {
       placeholder: "Select business type",
       type: "select",
       options: [
-        { value: 'saas', label: 'SaaS / Software' },
-        { value: 'consulting', label: 'Consulting / Professional Services' },
-        { value: 'agency', label: 'Marketing / Creative Agency' },
-        { value: 'technology', label: 'Technology / IT Services' },
-        { value: 'finance', label: 'Finance / Fintech' },
-        { value: 'manufacturing', label: 'Manufacturing / Industrial' },
-        { value: 'logistics', label: 'Logistics / Supply Chain' },
-        { value: 'healthcare', label: 'Healthcare Technology' },
-        { value: 'education', label: 'EdTech / Corporate Training' },
-        { value: 'construction', label: 'Construction / Engineering' },
-        { value: 'legal', label: 'Legal Technology / Services' },
-        { value: 'realestate', label: 'Commercial Real Estate' },
-        { value: 'security', label: 'Cybersecurity / Risk Management' },
-        { value: 'hr', label: 'HR Technology / Recruiting' },
-        { value: 'sales', label: 'Sales Enablement / CRM' },
-        { value: 'data', label: 'Data Analytics / Business Intelligence' },
-        { value: 'automation', label: 'Process Automation / RPA' },
-        { value: 'compliance', label: 'Compliance / Regulatory Technology' },
-        { value: 'other', label: 'Other B2B Business' }
+        { value: 'ecommerce', label: 'E-commerce' },
+        { value: 'saas', label: 'SaaS' },
+        { value: 'agency', label: 'Agency' },
+        { value: 'retail', label: 'Retail' },
+        { value: 'healthcare', label: 'Healthcare' },
+        { value: 'finance', label: 'Finance' },
+        { value: 'education', label: 'Education' },
+        { value: 'other', label: 'Other' }
       ],
       hint: "The industry or category your business operates in"
     },
@@ -845,19 +834,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load typography data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.typography) {
-      setTypography((section.data as any).typography);
-    } else if (form?.data && (form.data as any)?.typography) {
-      setTypography((form.data as any).typography);
+    if (sectionId && section?.data?.typography) {
+      setTypography(section.data.typography);
+    } else if (form?.data?.typography) {
+      setTypography(form.data.typography);
     }
   }, [form, section, sectionId]);
 
   // Load brand assets data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.brandAssets) {
-      setBrandAssets((section.data as any).brandAssets);
-    } else if (form?.data && (form.data as any)?.brandAssets) {
-      setBrandAssets((form.data as any).brandAssets);
+    if (sectionId && section?.data?.brandAssets) {
+      setBrandAssets(section.data.brandAssets);
+    } else if (form?.data?.brandAssets) {
+      setBrandAssets(form.data.brandAssets);
     }
   }, [form, section, sectionId]);
 
@@ -883,8 +872,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load completed steps from form data when component mounts
   useEffect(() => {
-    if (form?.data && typeof form.data === 'object' && (form.data as any)?.completedSteps && Array.isArray((form.data as any).completedSteps)) {
-      const loadedSteps = (form.data as any).completedSteps as number[];
+    if (form?.data?.completedSteps) {
+      const loadedSteps = form.data.completedSteps;
       setCompletedSteps(loadedSteps);
       
       // Recalculate progress immediately
@@ -972,12 +961,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const validateBusinessInfo = () => {
     const errors: Record<string, string> = {};
     for (const field of formFields) {
-      // Only validate business detail fields for business info
-      if (field.name in businessDetails) {
-        const error = validateField(field.name, businessDetails[field.name as keyof BusinessDetails] || '');
-        if (error) {
-          errors[field.name] = error;
-        }
+      const error = validateField(field.name, businessDetails[field.name]);
+      if (error) {
+        errors[field.name] = error;
       }
     }
     return errors;
@@ -1440,7 +1426,7 @@ const renderFormActions = () => {
                 <FormField
                   key="website"
                   field={formFields[2]} // Website
-                  value={businessDetails.website || ''}
+                  value={businessDetails.website}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1471,15 +1457,38 @@ const renderFormActions = () => {
                 touched={touched}
               />
               
-              <FormField
-                key="phone"
-                field={formFields[4]} // Phone Number
-                value={businessDetails.phone}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                errors={errors}
-                touched={touched}
-              />
+              {/* Enhanced Phone with Smart Formatting */}
+              <div className="space-y-2">
+                <FormField
+                  key="phone"
+                  field={{
+                    ...formFields[4], // Phone Number
+                    placeholder: businessDetails.location 
+                      ? detectCountryFromLocation(businessDetails.location) === 'UK' 
+                        ? '+44 20 1234 5678'
+                        : detectCountryFromLocation(businessDetails.location) === 'US'
+                        ? '+1 (555) 123-4567'
+                        : formFields[4].placeholder
+                      : formFields[4].placeholder
+                  }}
+                  value={businessDetails.phone}
+                  onChange={(e) => {
+                    const formatted = formatPhoneNumberSmart(e.target.value, businessDetails.location);
+                    handleChange({ ...e, target: { ...e.target, value: formatted } });
+                  }}
+                  onBlur={handleBlur}
+                  errors={errors}
+                  touched={touched}
+                />
+                
+                {/* Phone formatting helper */}
+                {businessDetails.location && businessDetails.phone && (
+                  <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} flex items-center gap-1`}>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    Phone number formatted for {detectCountryFromLocation(businessDetails.location) || 'international'} format
+                  </div>
+                )}
+              </div>
 
               {/* LinkedIn with better guidance */}
               <div className="space-y-2">
@@ -1489,7 +1498,7 @@ const renderFormActions = () => {
                     ...formFields[3], // LinkedIn
                     placeholder: "https://linkedin.com/company/your-company"
                   }}
-                  value={businessDetails.linkedin || ''}
+                  value={businessDetails.linkedin}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1999,47 +2008,21 @@ const renderFormActions = () => {
   };
 
   const renderTargetAudienceForm = () => {
-    // B2B-focused job title suggestions for decision makers
+    // Smart suggestions based on business type
     const getJobTitleSuggestions = () => {
       switch (businessDetails.type) {
         case 'saas':
-          return ['CTO', 'VP of Engineering', 'Head of Product', 'VP of Technology', 'Chief Product Officer', 'IT Director', 'Head of Infrastructure', 'VP of R&D'];
-        case 'consulting':
-          return ['Managing Partner', 'Principal', 'Practice Leader', 'VP of Strategy', 'Director of Consulting', 'Business Development Director', 'Client Partner', 'Senior Principal'];
+          return ['CTO', 'VP of Engineering', 'Software Developer', 'Product Manager', 'IT Director'];
+        case 'ecommerce':
+          return ['Marketing Manager', 'E-commerce Manager', 'Digital Marketing Director', 'CMO', 'Brand Manager'];
         case 'agency':
-          return ['Agency Owner', 'Creative Director', 'VP of Client Services', 'Account Director', 'Head of Strategy', 'VP of Business Development', 'Managing Director', 'Partner'];
-        case 'technology':
-          return ['CTO', 'IT Director', 'VP of Technology', 'Chief Information Officer', 'Head of IT', 'Systems Director', 'Infrastructure Manager', 'VP of Engineering'];
-        case 'finance':
-          return ['CFO', 'VP of Finance', 'Chief Risk Officer', 'Investment Director', 'Finance Director', 'Head of Treasury', 'VP of Financial Planning', 'Controller'];
-        case 'manufacturing':
-          return ['VP of Operations', 'Plant Manager', 'Manufacturing Director', 'VP of Supply Chain', 'Operations Director', 'Production Director', 'Quality Director', 'Head of Procurement'];
-        case 'logistics':
-          return ['VP of Logistics', 'Supply Chain Director', 'Operations Director', 'Head of Transportation', 'Distribution Manager', 'Logistics Director', 'VP of Operations', 'Warehouse Director'];
+          return ['Marketing Director', 'Brand Manager', 'CMO', 'VP of Marketing', 'Business Owner'];
         case 'healthcare':
-          return ['Chief Medical Officer', 'VP of Clinical Operations', 'Healthcare Administrator', 'Medical Director', 'Chief Technology Officer', 'VP of Digital Health', 'Clinical Director', 'Head of Innovation'];
-        case 'education':
-          return ['Chief Learning Officer', 'VP of Training', 'Director of Learning & Development', 'Head of Corporate Training', 'Training Manager', 'Learning Director', 'VP of Education', 'Curriculum Director'];
-        case 'construction':
-          return ['VP of Construction', 'Project Director', 'Construction Manager', 'Director of Operations', 'Head of Engineering', 'Project Executive', 'Business Development Director', 'Operations Manager'];
-        case 'legal':
-          return ['General Counsel', 'Chief Legal Officer', 'Legal Director', 'Compliance Officer', 'Managing Partner', 'Head of Legal', 'VP of Legal Affairs', 'Chief Compliance Officer'];
-        case 'realestate':
-          return ['VP of Real Estate', 'Director of Commercial Real Estate', 'Portfolio Manager', 'Investment Director', 'Head of Property Management', 'Real Estate Director', 'Asset Manager', 'Development Director'];
-        case 'security':
-          return ['CISO', 'Chief Security Officer', 'VP of Security', 'Head of Cybersecurity', 'Security Director', 'Risk Manager', 'Compliance Director', 'Information Security Manager'];
-        case 'hr':
-          return ['CHRO', 'VP of Human Resources', 'Head of Talent Acquisition', 'Director of People Operations', 'HR Director', 'VP of Talent', 'Head of Recruiting', 'People Director'];
-        case 'sales':
-          return ['Chief Revenue Officer', 'VP of Sales', 'Sales Director', 'Head of Business Development', 'VP of Revenue Operations', 'Sales Operations Director', 'Channel Director', 'Enterprise Sales Director'];
-        case 'data':
-          return ['Chief Data Officer', 'VP of Analytics', 'Head of Business Intelligence', 'Data Director', 'Analytics Director', 'VP of Data Science', 'Business Intelligence Director', 'Head of Data'];
-        case 'automation':
-          return ['VP of Operations', 'Process Director', 'Head of Business Process', 'Operations Director', 'Automation Manager', 'VP of Digital Transformation', 'Process Excellence Director', 'Chief Operations Officer'];
-        case 'compliance':
-          return ['Chief Compliance Officer', 'VP of Compliance', 'Compliance Director', 'Risk Director', 'Head of Regulatory Affairs', 'Audit Director', 'VP of Risk Management', 'Chief Risk Officer'];
+          return ['Practice Manager', 'Healthcare Administrator', 'Medical Director', 'Clinic Owner'];
+        case 'finance':
+          return ['CFO', 'Finance Director', 'Investment Manager', 'Financial Advisor', 'Controller'];
         default:
-          return ['CEO', 'COO', 'VP of Operations', 'Managing Director', 'Business Owner', 'General Manager', 'Department Head', 'Director'];
+          return ['CEO', 'Marketing Manager', 'Operations Manager', 'Business Owner', 'Director'];
       }
     };
 
@@ -2480,180 +2463,28 @@ const renderFormActions = () => {
             'Save time and increase productivity',
             'Streamline your workflow',
             'Scale your business efficiently',
-            'Reduce manual work by 80%',
-            'Free trial with no credit card required',
-            'Integrate with 100+ popular tools'
+            'Reduce manual work by 80%'
           ];
         case 'ecommerce':
           return [
             'Premium quality at affordable prices',
             'Fast shipping and easy returns',
             'Exclusive deals for loyal customers',
-            'Sustainable and eco-friendly products',
-            'Free shipping on orders over $50',
-            '30-day money-back guarantee'
+            'Sustainable and eco-friendly products'
           ];
         case 'agency':
           return [
             'Expert team with proven results',
             'Customized solutions for your business',
             'ROI-focused marketing strategies',
-            'Full-service digital marketing',
-            'Award-winning creative campaigns',
-            'Data-driven approach to growth'
-          ];
-        case 'consulting':
-          return [
-            'Expert guidance from industry veterans',
-            'Proven methodologies and frameworks',
-            'Customized strategies for your goals',
-            'Measurable results and ROI',
-            'Transform your business operations',
-            'Strategic insights that drive growth'
-          ];
-        case 'healthcare':
-          return [
-            'Compassionate care from experienced professionals',
-            'State-of-the-art technology and treatments',
-            'Convenient scheduling and locations',
-            'Comprehensive health solutions',
-            'Patient-centered approach to wellness',
-            'Insurance accepted and affordable care'
-          ];
-        case 'finance':
-          return [
-            'Secure and transparent financial solutions',
-            'Expert guidance for your financial goals',
-            'Competitive rates and low fees',
-            'Personalized investment strategies',
-            'Trusted by thousands of clients',
-            'Advanced security and compliance'
-          ];
-        case 'education':
-          return [
-            'Learn from industry experts',
-            'Flexible learning at your own pace',
-            'Practical skills for real-world success',
-            'Lifetime access to course materials',
-            'Career support and networking',
-            'Certification upon completion'
-          ];
-        case 'realestate':
-          return [
-            'Expert knowledge of local markets',
-            'Personalized service for buyers and sellers',
-            'Proven track record of successful deals',
-            'Comprehensive market analysis',
-            'Negotiation expertise that saves money',
-            'End-to-end support throughout the process'
-          ];
-        case 'hospitality':
-          return [
-            'Unforgettable experiences and memories',
-            'Exceptional service and attention to detail',
-            'Prime locations and luxury amenities',
-            'Best price guarantee',
-            'Flexible booking and cancellation',
-            'Award-winning hospitality team'
-          ];
-        case 'fitness':
-          return [
-            'Transform your body and mindset',
-            'Expert trainers and personalized programs',
-            'State-of-the-art equipment and facilities',
-            'Supportive community and motivation',
-            'Flexible membership options',
-            'Proven results and success stories'
-          ];
-        case 'food':
-          return [
-            'Fresh, high-quality ingredients',
-            'Authentic flavors and recipes',
-            'Farm-to-table sustainable sourcing',
-            'Convenient delivery and pickup',
-            'Catering for events and parties',
-            'Family-owned with traditional values'
-          ];
-        case 'legal':
-          return [
-            'Experienced attorneys with proven results',
-            'Personalized attention to your case',
-            'Transparent pricing and communication',
-            'Strong track record of successful outcomes',
-            'Available 24/7 for urgent matters',
-            'No fees unless we win your case'
-          ];
-        case 'beauty':
-          return [
-            'Premium products for radiant beauty',
-            'Expert stylists and beauty professionals',
-            'Trendsetting styles and techniques',
-            'Natural and organic ingredients',
-            'Personalized beauty consultations',
-            'Transform your look and confidence'
-          ];
-        case 'construction':
-          return [
-            'Quality craftsmanship and attention to detail',
-            'Licensed and insured professionals',
-            'On-time and on-budget project delivery',
-            'Free estimates and consultations',
-            'Sustainable building practices',
-            'Warranty on all work completed'
-          ];
-        case 'manufacturing':
-          return [
-            'Precision manufacturing and quality control',
-            'Custom solutions for unique requirements',
-            'Fast turnaround and reliable delivery',
-            'ISO certified processes and standards',
-            'Competitive pricing and bulk discounts',
-            'Advanced technology and automation'
-          ];
-        case 'nonprofit':
-          return [
-            'Making a real difference in the community',
-            'Transparent use of donations and funds',
-            'Volunteer opportunities for everyone',
-            'Direct impact on lives and causes',
-            'Join our mission to create change',
-            '100% of donations go to programs'
-          ];
-        case 'automotive':
-          return [
-            'Expert service from certified technicians',
-            'Genuine parts and quality warranties',
-            'Convenient scheduling and locations',
-            'Transparent pricing and estimates',
-            'Family-owned and community trusted',
-            'State-of-the-art diagnostic equipment'
-          ];
-        case 'logistics':
-          return [
-            'Reliable delivery and shipping solutions',
-            'Global network and local expertise',
-            'Real-time tracking and updates',
-            'Cost-effective and efficient logistics',
-            'Secure handling of valuable cargo',
-            'Flexible solutions for any size business'
-          ];
-        case 'technology':
-          return [
-            'Cutting-edge technology solutions',
-            'Expert IT support and maintenance',
-            'Scalable systems for growing businesses',
-            'Cybersecurity and data protection',
-            '24/7 monitoring and support',
-            'Custom software development'
+            'Full-service digital marketing'
           ];
         default:
           return [
             'Trusted by industry leaders',
             'Proven results and expertise',
             'Personalized service and support',
-            'Innovation that drives success',
-            'Exceptional value and quality',
-            'Your success is our priority'
+            'Innovation that drives success'
           ];
       }
     };
@@ -3132,7 +2963,7 @@ const renderFormActions = () => {
     );
   };
 
-  const [systemIntegrationData, setSystemIntegrationData] = useState<SystemIntegrationData>({
+  const [systemIntegrationData, setSystemIntegrationData] = useState({
     crm: {
       system: '',
       instance: '',
@@ -3149,8 +2980,7 @@ const renderFormActions = () => {
       statusChanges: '',
       notifications: '',
       additionalSteps: '',
-      customLeadCapture: '',
-      leadStatusFlow: ''
+      customLeadCapture: ''
     }
   });
 
@@ -3658,120 +3488,23 @@ const renderFormActions = () => {
     return () => clearTimeout(timeoutId);
   }, [businessDetails, campaign, audience, typography, brandAssets, formId]);
 
-  // B2B-focused smart suggestions for business types based on website
+  // Add smart suggestions for business types based on website
   const getBusinessTypeSuggestion = (website: string) => {
     if (!website) return null;
     
     const domain = website.toLowerCase();
-    
-    // SaaS/Software indicators
-    if (domain.includes('saas') || domain.includes('software') || domain.includes('app') || 
-        domain.includes('platform') || domain.includes('cloud') || domain.includes('api')) {
+    if (domain.includes('shop') || domain.includes('store') || domain.includes('ecommerce')) {
+      return 'ecommerce';
+    }
+    if (domain.includes('saas') || domain.includes('software') || domain.includes('app')) {
       return 'saas';
     }
-    
-    // Consulting indicators
-    if (domain.includes('consulting') || domain.includes('advisory') || domain.includes('solutions') || 
-        domain.includes('strategy') || domain.includes('expert') || domain.includes('services')) {
-      return 'consulting';
-    }
-    
-    // Agency indicators
-    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('creative') || 
-        domain.includes('advertising') || domain.includes('digital')) {
+    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('design')) {
       return 'agency';
     }
-    
-    // Technology/IT indicators
-    if (domain.includes('tech') || domain.includes('it') || domain.includes('system') || 
-        domain.includes('network') || domain.includes('infrastructure')) {
-      return 'technology';
-    }
-    
-    // Finance/Fintech indicators
-    if (domain.includes('finance') || domain.includes('fintech') || domain.includes('payment') || 
-        domain.includes('banking') || domain.includes('invest') || domain.includes('capital')) {
-      return 'finance';
-    }
-    
-    // Manufacturing indicators
-    if (domain.includes('manufacturing') || domain.includes('industrial') || 
-        domain.includes('production') || domain.includes('supply') || domain.includes('factory')) {
-      return 'manufacturing';
-    }
-    
-    // Logistics indicators
-    if (domain.includes('logistics') || domain.includes('supply') || domain.includes('chain') || 
-        domain.includes('shipping') || domain.includes('freight') || domain.includes('transport')) {
-      return 'logistics';
-    }
-    
-    // Healthcare Technology indicators
-    if (domain.includes('healthtech') || domain.includes('medtech') || 
-        (domain.includes('health') && (domain.includes('tech') || domain.includes('software')))) {
+    if (domain.includes('health') || domain.includes('medical') || domain.includes('clinic')) {
       return 'healthcare';
     }
-    
-    // EdTech indicators
-    if (domain.includes('edtech') || domain.includes('training') || domain.includes('learning') || 
-        (domain.includes('education') && domain.includes('tech'))) {
-      return 'education';
-    }
-    
-    // Construction/Engineering indicators
-    if (domain.includes('construction') || domain.includes('engineering') || domain.includes('build') || 
-        domain.includes('contractor') || domain.includes('architect')) {
-      return 'construction';
-    }
-    
-    // Legal Technology indicators
-    if (domain.includes('legaltech') || domain.includes('lawtech') || 
-        (domain.includes('legal') && domain.includes('tech'))) {
-      return 'legal';
-    }
-    
-    // Commercial Real Estate indicators
-    if (domain.includes('commercial') || domain.includes('realty') || domain.includes('property') || 
-        (domain.includes('real') && domain.includes('estate'))) {
-      return 'realestate';
-    }
-    
-    // Cybersecurity indicators
-    if (domain.includes('security') || domain.includes('cyber') || domain.includes('risk') || 
-        domain.includes('compliance') || domain.includes('audit')) {
-      return 'security';
-    }
-    
-    // HR Technology indicators
-    if (domain.includes('hrtech') || domain.includes('recruiting') || domain.includes('talent') || 
-        (domain.includes('hr') && domain.includes('tech'))) {
-      return 'hr';
-    }
-    
-    // Sales Technology indicators
-    if (domain.includes('crm') || domain.includes('sales') || domain.includes('lead') || 
-        domain.includes('pipeline') || domain.includes('revenue')) {
-      return 'sales';
-    }
-    
-    // Data Analytics indicators
-    if (domain.includes('analytics') || domain.includes('data') || domain.includes('intelligence') || 
-        domain.includes('insights') || domain.includes('dashboard')) {
-      return 'data';
-    }
-    
-    // Process Automation indicators
-    if (domain.includes('automation') || domain.includes('workflow') || domain.includes('process') || 
-        domain.includes('rpa') || domain.includes('integration')) {
-      return 'automation';
-    }
-    
-    // Compliance Technology indicators
-    if (domain.includes('compliance') || domain.includes('regulatory') || domain.includes('governance') || 
-        domain.includes('audit') || domain.includes('control')) {
-      return 'compliance';
-    }
-    
     return null;
   };
 
@@ -3947,16 +3680,6 @@ const renderFormActions = () => {
 
 export default OnboardingForm;
 
-// Add proper type interfaces for the data structures
-interface TypographyData {
-  titleFont: string;
-  subtitleFont: string;
-  bodyFont: string;
-  customTitleFont: string;
-  customSubtitleFont: string;
-  customBodyFont: string;
-}
-
 interface BrandAssets {
   brandName: string;
   logo: File | null;
@@ -3964,40 +3687,4 @@ interface BrandAssets {
   secondaryColor: string;
   highlightColor: string;
   additionalAssets: string;
-}
-
-interface CampaignData {
-  successCriteria: string;
-  objective: string;
-  keyMessages: string;
-  callToAction: string;
-}
-
-interface AudienceData {
-  jobTitles: string;
-  industries: string;
-  companySize: string;
-  locations: string;
-}
-
-interface SystemIntegrationData {
-  crm: {
-    system: string;
-    instance: string;
-    apiKey: string;
-    customSystem: string;
-  };
-  calendar: {
-    system: string;
-    schedulingTool: string;
-    customTool: string;
-  };
-  process: {
-    leadCapture: string;
-    statusChanges: string;
-    notifications: string;
-    additionalSteps: string;
-    customLeadCapture: string;
-    leadStatusFlow: string;
-  };
 }

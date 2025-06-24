@@ -124,7 +124,7 @@ const formatPhoneNumber = (value: string) => {
 
 interface FormField {
   label: string;
-  name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData;
+  name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize";
   icon: any;
   placeholder: string;
   type?: string;
@@ -250,7 +250,7 @@ const FormField = ({
   );
 };
 
-const validateField = (name: keyof BusinessDetails | keyof CampaignData | keyof AudienceData, value: string) => {
+const validateField = (name: keyof BusinessDetails | "successCriteria" | "objective" | "jobTitles" | "industries" | "companySize", value: string) => {
   let error = '';
 
   switch (name) {
@@ -845,19 +845,19 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load typography data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.typography) {
-      setTypography((section.data as any).typography);
-    } else if (form?.data && (form.data as any)?.typography) {
-      setTypography((form.data as any).typography);
+    if (sectionId && section?.data?.typography) {
+      setTypography(section.data.typography);
+    } else if (form?.data?.typography) {
+      setTypography(form.data.typography);
     }
   }, [form, section, sectionId]);
 
   // Load brand assets data from form data
   useEffect(() => {
-    if (sectionId && section?.data && (section.data as any)?.brandAssets) {
-      setBrandAssets((section.data as any).brandAssets);
-    } else if (form?.data && (form.data as any)?.brandAssets) {
-      setBrandAssets((form.data as any).brandAssets);
+    if (sectionId && section?.data?.brandAssets) {
+      setBrandAssets(section.data.brandAssets);
+    } else if (form?.data?.brandAssets) {
+      setBrandAssets(form.data.brandAssets);
     }
   }, [form, section, sectionId]);
 
@@ -883,8 +883,8 @@ export function OnboardingForm({ formId, sectionId }: Props) {
 
   // Load completed steps from form data when component mounts
   useEffect(() => {
-    if (form?.data && typeof form.data === 'object' && (form.data as any)?.completedSteps && Array.isArray((form.data as any).completedSteps)) {
-      const loadedSteps = (form.data as any).completedSteps as number[];
+    if (form?.data?.completedSteps) {
+      const loadedSteps = form.data.completedSteps;
       setCompletedSteps(loadedSteps);
       
       // Recalculate progress immediately
@@ -972,12 +972,9 @@ export function OnboardingForm({ formId, sectionId }: Props) {
   const validateBusinessInfo = () => {
     const errors: Record<string, string> = {};
     for (const field of formFields) {
-      // Only validate business detail fields for business info
-      if (field.name in businessDetails) {
-        const error = validateField(field.name, businessDetails[field.name as keyof BusinessDetails] || '');
-        if (error) {
-          errors[field.name] = error;
-        }
+      const error = validateField(field.name, businessDetails[field.name]);
+      if (error) {
+        errors[field.name] = error;
       }
     }
     return errors;
@@ -1440,7 +1437,7 @@ const renderFormActions = () => {
                 <FormField
                   key="website"
                   field={formFields[2]} // Website
-                  value={businessDetails.website || ''}
+                  value={businessDetails.website}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1489,7 +1486,7 @@ const renderFormActions = () => {
                     ...formFields[3], // LinkedIn
                     placeholder: "https://linkedin.com/company/your-company"
                   }}
-                  value={businessDetails.linkedin || ''}
+                  value={businessDetails.linkedin}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   errors={errors}
@@ -1999,47 +1996,51 @@ const renderFormActions = () => {
   };
 
   const renderTargetAudienceForm = () => {
-    // B2B-focused job title suggestions for decision makers
+    // Enhanced smart suggestions based on business type
     const getJobTitleSuggestions = () => {
       switch (businessDetails.type) {
         case 'saas':
-          return ['CTO', 'VP of Engineering', 'Head of Product', 'VP of Technology', 'Chief Product Officer', 'IT Director', 'Head of Infrastructure', 'VP of R&D'];
-        case 'consulting':
-          return ['Managing Partner', 'Principal', 'Practice Leader', 'VP of Strategy', 'Director of Consulting', 'Business Development Director', 'Client Partner', 'Senior Principal'];
+          return ['CTO', 'VP of Engineering', 'Software Developer', 'Product Manager', 'IT Director', 'DevOps Engineer', 'VP of Product', 'Head of Technology'];
+        case 'ecommerce':
+          return ['Marketing Manager', 'E-commerce Manager', 'Digital Marketing Director', 'CMO', 'Brand Manager', 'VP of Sales', 'Growth Manager', 'Customer Success Manager'];
         case 'agency':
-          return ['Agency Owner', 'Creative Director', 'VP of Client Services', 'Account Director', 'Head of Strategy', 'VP of Business Development', 'Managing Director', 'Partner'];
-        case 'technology':
-          return ['CTO', 'IT Director', 'VP of Technology', 'Chief Information Officer', 'Head of IT', 'Systems Director', 'Infrastructure Manager', 'VP of Engineering'];
-        case 'finance':
-          return ['CFO', 'VP of Finance', 'Chief Risk Officer', 'Investment Director', 'Finance Director', 'Head of Treasury', 'VP of Financial Planning', 'Controller'];
-        case 'manufacturing':
-          return ['VP of Operations', 'Plant Manager', 'Manufacturing Director', 'VP of Supply Chain', 'Operations Director', 'Production Director', 'Quality Director', 'Head of Procurement'];
-        case 'logistics':
-          return ['VP of Logistics', 'Supply Chain Director', 'Operations Director', 'Head of Transportation', 'Distribution Manager', 'Logistics Director', 'VP of Operations', 'Warehouse Director'];
+          return ['Marketing Director', 'Brand Manager', 'CMO', 'VP of Marketing', 'Business Owner', 'Creative Director', 'Account Manager', 'VP of Sales'];
+        case 'consulting':
+          return ['CEO', 'Managing Director', 'Principal Consultant', 'VP of Strategy', 'Business Development Director', 'Partner', 'Practice Lead', 'Client Director'];
         case 'healthcare':
-          return ['Chief Medical Officer', 'VP of Clinical Operations', 'Healthcare Administrator', 'Medical Director', 'Chief Technology Officer', 'VP of Digital Health', 'Clinical Director', 'Head of Innovation'];
+          return ['Practice Manager', 'Healthcare Administrator', 'Medical Director', 'Clinic Owner', 'Chief Medical Officer', 'Department Head', 'VP of Operations'];
+        case 'finance':
+          return ['CFO', 'Finance Director', 'Investment Manager', 'Financial Advisor', 'Controller', 'VP of Finance', 'Risk Manager', 'Compliance Officer'];
         case 'education':
-          return ['Chief Learning Officer', 'VP of Training', 'Director of Learning & Development', 'Head of Corporate Training', 'Training Manager', 'Learning Director', 'VP of Education', 'Curriculum Director'];
-        case 'construction':
-          return ['VP of Construction', 'Project Director', 'Construction Manager', 'Director of Operations', 'Head of Engineering', 'Project Executive', 'Business Development Director', 'Operations Manager'];
-        case 'legal':
-          return ['General Counsel', 'Chief Legal Officer', 'Legal Director', 'Compliance Officer', 'Managing Partner', 'Head of Legal', 'VP of Legal Affairs', 'Chief Compliance Officer'];
+          return ['Dean', 'Principal', 'Director of Education', 'Curriculum Manager', 'VP of Academic Affairs', 'Training Manager', 'Learning Director', 'Head of School'];
         case 'realestate':
-          return ['VP of Real Estate', 'Director of Commercial Real Estate', 'Portfolio Manager', 'Investment Director', 'Head of Property Management', 'Real Estate Director', 'Asset Manager', 'Development Director'];
-        case 'security':
-          return ['CISO', 'Chief Security Officer', 'VP of Security', 'Head of Cybersecurity', 'Security Director', 'Risk Manager', 'Compliance Director', 'Information Security Manager'];
-        case 'hr':
-          return ['CHRO', 'VP of Human Resources', 'Head of Talent Acquisition', 'Director of People Operations', 'HR Director', 'VP of Talent', 'Head of Recruiting', 'People Director'];
-        case 'sales':
-          return ['Chief Revenue Officer', 'VP of Sales', 'Sales Director', 'Head of Business Development', 'VP of Revenue Operations', 'Sales Operations Director', 'Channel Director', 'Enterprise Sales Director'];
-        case 'data':
-          return ['Chief Data Officer', 'VP of Analytics', 'Head of Business Intelligence', 'Data Director', 'Analytics Director', 'VP of Data Science', 'Business Intelligence Director', 'Head of Data'];
-        case 'automation':
-          return ['VP of Operations', 'Process Director', 'Head of Business Process', 'Operations Director', 'Automation Manager', 'VP of Digital Transformation', 'Process Excellence Director', 'Chief Operations Officer'];
-        case 'compliance':
-          return ['Chief Compliance Officer', 'VP of Compliance', 'Compliance Director', 'Risk Director', 'Head of Regulatory Affairs', 'Audit Director', 'VP of Risk Management', 'Chief Risk Officer'];
+          return ['Real Estate Agent', 'Broker', 'Property Manager', 'Director of Sales', 'VP of Real Estate', 'Investment Manager', 'Development Director'];
+        case 'hospitality':
+          return ['General Manager', 'Hotel Manager', 'Director of Operations', 'VP of Hospitality', 'Event Manager', 'Sales Director', 'Guest Services Manager'];
+        case 'retail':
+          return ['Store Manager', 'Retail Director', 'VP of Retail', 'Merchandising Manager', 'District Manager', 'Regional Manager', 'Buyer'];
+        case 'manufacturing':
+          return ['Plant Manager', 'Operations Director', 'VP of Manufacturing', 'Production Manager', 'Quality Manager', 'Supply Chain Director', 'Engineering Manager'];
+        case 'construction':
+          return ['Project Manager', 'Construction Manager', 'General Contractor', 'VP of Construction', 'Site Supervisor', 'Architect', 'Engineering Manager'];
+        case 'legal':
+          return ['Managing Partner', 'Senior Partner', 'Attorney', 'Legal Director', 'General Counsel', 'Practice Manager', 'Paralegal Manager'];
+        case 'fitness':
+          return ['Gym Owner', 'Fitness Director', 'Personal Training Manager', 'Operations Manager', 'Health Club Manager', 'Wellness Director'];
+        case 'food':
+          return ['Restaurant Manager', 'Executive Chef', 'Food Service Director', 'Catering Manager', 'Operations Manager', 'Franchise Owner'];
+        case 'beauty':
+          return ['Salon Owner', 'Beauty Director', 'Spa Manager', 'Stylist Manager', 'Operations Manager', 'Franchise Owner'];
+        case 'automotive':
+          return ['Service Manager', 'General Manager', 'Sales Manager', 'Parts Manager', 'Dealership Owner', 'Operations Director'];
+        case 'logistics':
+          return ['Logistics Manager', 'Operations Director', 'Supply Chain Manager', 'Transportation Manager', 'Warehouse Manager', 'VP of Logistics'];
+        case 'nonprofit':
+          return ['Executive Director', 'Program Director', 'Development Director', 'Operations Manager', 'Board Member', 'Fundraising Manager'];
+        case 'technology':
+          return ['IT Director', 'CTO', 'Systems Administrator', 'Network Manager', 'VP of Technology', 'IT Manager', 'Technical Director'];
         default:
-          return ['CEO', 'COO', 'VP of Operations', 'Managing Director', 'Business Owner', 'General Manager', 'Department Head', 'Director'];
+          return ['CEO', 'Marketing Manager', 'Operations Manager', 'Business Owner', 'Director', 'VP of Sales', 'General Manager'];
       }
     };
 
@@ -3132,7 +3133,7 @@ const renderFormActions = () => {
     );
   };
 
-  const [systemIntegrationData, setSystemIntegrationData] = useState<SystemIntegrationData>({
+  const [systemIntegrationData, setSystemIntegrationData] = useState({
     crm: {
       system: '',
       instance: '',
@@ -3149,8 +3150,7 @@ const renderFormActions = () => {
       statusChanges: '',
       notifications: '',
       additionalSteps: '',
-      customLeadCapture: '',
-      leadStatusFlow: ''
+      customLeadCapture: ''
     }
   });
 
@@ -3658,118 +3658,117 @@ const renderFormActions = () => {
     return () => clearTimeout(timeoutId);
   }, [businessDetails, campaign, audience, typography, brandAssets, formId]);
 
-  // B2B-focused smart suggestions for business types based on website
+  // Enhanced smart suggestions for business types based on website
   const getBusinessTypeSuggestion = (website: string) => {
     if (!website) return null;
     
     const domain = website.toLowerCase();
     
+    // E-commerce indicators
+    if (domain.includes('shop') || domain.includes('store') || domain.includes('ecommerce') || 
+        domain.includes('cart') || domain.includes('buy') || domain.includes('market')) {
+      return 'ecommerce';
+    }
+    
     // SaaS/Software indicators
     if (domain.includes('saas') || domain.includes('software') || domain.includes('app') || 
-        domain.includes('platform') || domain.includes('cloud') || domain.includes('api')) {
+        domain.includes('platform') || domain.includes('cloud') || domain.includes('api') ||
+        domain.includes('tech') || domain.includes('digital')) {
       return 'saas';
+    }
+    
+    // Agency indicators
+    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('design') || 
+        domain.includes('creative') || domain.includes('media') || domain.includes('advertising')) {
+      return 'agency';
     }
     
     // Consulting indicators
     if (domain.includes('consulting') || domain.includes('advisory') || domain.includes('solutions') || 
-        domain.includes('strategy') || domain.includes('expert') || domain.includes('services')) {
+        domain.includes('strategy') || domain.includes('expert')) {
       return 'consulting';
     }
     
-    // Agency indicators
-    if (domain.includes('agency') || domain.includes('marketing') || domain.includes('creative') || 
-        domain.includes('advertising') || domain.includes('digital')) {
-      return 'agency';
-    }
-    
-    // Technology/IT indicators
-    if (domain.includes('tech') || domain.includes('it') || domain.includes('system') || 
-        domain.includes('network') || domain.includes('infrastructure')) {
-      return 'technology';
-    }
-    
-    // Finance/Fintech indicators
-    if (domain.includes('finance') || domain.includes('fintech') || domain.includes('payment') || 
-        domain.includes('banking') || domain.includes('invest') || domain.includes('capital')) {
-      return 'finance';
-    }
-    
-    // Manufacturing indicators
-    if (domain.includes('manufacturing') || domain.includes('industrial') || 
-        domain.includes('production') || domain.includes('supply') || domain.includes('factory')) {
-      return 'manufacturing';
-    }
-    
-    // Logistics indicators
-    if (domain.includes('logistics') || domain.includes('supply') || domain.includes('chain') || 
-        domain.includes('shipping') || domain.includes('freight') || domain.includes('transport')) {
-      return 'logistics';
-    }
-    
-    // Healthcare Technology indicators
-    if (domain.includes('healthtech') || domain.includes('medtech') || 
-        (domain.includes('health') && (domain.includes('tech') || domain.includes('software')))) {
+    // Healthcare indicators
+    if (domain.includes('health') || domain.includes('medical') || domain.includes('clinic') || 
+        domain.includes('hospital') || domain.includes('care') || domain.includes('wellness') ||
+        domain.includes('dental') || domain.includes('therapy')) {
       return 'healthcare';
     }
     
-    // EdTech indicators
-    if (domain.includes('edtech') || domain.includes('training') || domain.includes('learning') || 
-        (domain.includes('education') && domain.includes('tech'))) {
+    // Finance indicators
+    if (domain.includes('finance') || domain.includes('bank') || domain.includes('invest') || 
+        domain.includes('loan') || domain.includes('credit') || domain.includes('fintech') ||
+        domain.includes('payment') || domain.includes('money')) {
+      return 'finance';
+    }
+    
+    // Education indicators
+    if (domain.includes('education') || domain.includes('learn') || domain.includes('course') || 
+        domain.includes('school') || domain.includes('university') || domain.includes('training') ||
+        domain.includes('academy') || domain.includes('teach')) {
       return 'education';
     }
     
-    // Construction/Engineering indicators
-    if (domain.includes('construction') || domain.includes('engineering') || domain.includes('build') || 
-        domain.includes('contractor') || domain.includes('architect')) {
-      return 'construction';
-    }
-    
-    // Legal Technology indicators
-    if (domain.includes('legaltech') || domain.includes('lawtech') || 
-        (domain.includes('legal') && domain.includes('tech'))) {
-      return 'legal';
-    }
-    
-    // Commercial Real Estate indicators
-    if (domain.includes('commercial') || domain.includes('realty') || domain.includes('property') || 
-        (domain.includes('real') && domain.includes('estate'))) {
+    // Real Estate indicators
+    if (domain.includes('realty') || domain.includes('property') || domain.includes('estate') || 
+        domain.includes('homes') || domain.includes('real') || domain.includes('mortgage')) {
       return 'realestate';
     }
     
-    // Cybersecurity indicators
-    if (domain.includes('security') || domain.includes('cyber') || domain.includes('risk') || 
-        domain.includes('compliance') || domain.includes('audit')) {
-      return 'security';
+    // Hospitality indicators
+    if (domain.includes('hotel') || domain.includes('travel') || domain.includes('booking') || 
+        domain.includes('vacation') || domain.includes('resort') || domain.includes('hospitality')) {
+      return 'hospitality';
     }
     
-    // HR Technology indicators
-    if (domain.includes('hrtech') || domain.includes('recruiting') || domain.includes('talent') || 
-        (domain.includes('hr') && domain.includes('tech'))) {
-      return 'hr';
+    // Fitness indicators
+    if (domain.includes('fitness') || domain.includes('gym') || domain.includes('workout') || 
+        domain.includes('yoga') || domain.includes('sport') || domain.includes('nutrition')) {
+      return 'fitness';
     }
     
-    // Sales Technology indicators
-    if (domain.includes('crm') || domain.includes('sales') || domain.includes('lead') || 
-        domain.includes('pipeline') || domain.includes('revenue')) {
-      return 'sales';
+    // Food & Beverage indicators
+    if (domain.includes('food') || domain.includes('restaurant') || domain.includes('cafe') || 
+        domain.includes('kitchen') || domain.includes('recipe') || domain.includes('dining') ||
+        domain.includes('catering') || domain.includes('beverage')) {
+      return 'food';
     }
     
-    // Data Analytics indicators
-    if (domain.includes('analytics') || domain.includes('data') || domain.includes('intelligence') || 
-        domain.includes('insights') || domain.includes('dashboard')) {
-      return 'data';
+    // Legal indicators
+    if (domain.includes('law') || domain.includes('legal') || domain.includes('attorney') || 
+        domain.includes('lawyer') || domain.includes('firm')) {
+      return 'legal';
     }
     
-    // Process Automation indicators
-    if (domain.includes('automation') || domain.includes('workflow') || domain.includes('process') || 
-        domain.includes('rpa') || domain.includes('integration')) {
-      return 'automation';
+    // Beauty indicators
+    if (domain.includes('beauty') || domain.includes('salon') || domain.includes('cosmetic') || 
+        domain.includes('fashion') || domain.includes('style') || domain.includes('spa')) {
+      return 'beauty';
     }
     
-    // Compliance Technology indicators
-    if (domain.includes('compliance') || domain.includes('regulatory') || domain.includes('governance') || 
-        domain.includes('audit') || domain.includes('control')) {
-      return 'compliance';
+    // Construction indicators
+    if (domain.includes('construction') || domain.includes('build') || domain.includes('contractor') || 
+        domain.includes('architect') || domain.includes('design') || domain.includes('renovation')) {
+      return 'construction';
+    }
+    
+    // Manufacturing indicators
+    if (domain.includes('manufacturing') || domain.includes('factory') || domain.includes('industrial') || 
+        domain.includes('production') || domain.includes('supply')) {
+      return 'manufacturing';
+    }
+    
+    // Non-profit indicators
+    if (domain.includes('nonprofit') || domain.includes('charity') || domain.includes('foundation') || 
+        domain.includes('org') || domain.includes('volunteer') || domain.includes('donation')) {
+      return 'nonprofit';
+    }
+    
+    // Technology indicators
+    if (domain.includes('tech') || domain.includes('it') || domain.includes('cyber') || 
+        domain.includes('data') || domain.includes('network') || domain.includes('system')) {
+      return 'technology';
     }
     
     return null;
@@ -3947,16 +3946,6 @@ const renderFormActions = () => {
 
 export default OnboardingForm;
 
-// Add proper type interfaces for the data structures
-interface TypographyData {
-  titleFont: string;
-  subtitleFont: string;
-  bodyFont: string;
-  customTitleFont: string;
-  customSubtitleFont: string;
-  customBodyFont: string;
-}
-
 interface BrandAssets {
   brandName: string;
   logo: File | null;
@@ -3964,40 +3953,4 @@ interface BrandAssets {
   secondaryColor: string;
   highlightColor: string;
   additionalAssets: string;
-}
-
-interface CampaignData {
-  successCriteria: string;
-  objective: string;
-  keyMessages: string;
-  callToAction: string;
-}
-
-interface AudienceData {
-  jobTitles: string;
-  industries: string;
-  companySize: string;
-  locations: string;
-}
-
-interface SystemIntegrationData {
-  crm: {
-    system: string;
-    instance: string;
-    apiKey: string;
-    customSystem: string;
-  };
-  calendar: {
-    system: string;
-    schedulingTool: string;
-    customTool: string;
-  };
-  process: {
-    leadCapture: string;
-    statusChanges: string;
-    notifications: string;
-    additionalSteps: string;
-    customLeadCapture: string;
-    leadStatusFlow: string;
-  };
 }
